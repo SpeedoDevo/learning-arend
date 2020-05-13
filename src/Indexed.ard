@@ -381,4 +381,17 @@
             ) => idp
       }
   }
+
+  \module Exercise7 \where {
+    -- Define the type CTree A n of (complete and full) binary trees of height precisely n,
+    -- which store elements in internal nodes, but not in leaves. The height of a leaf is 0.
+
+    \data CTree (A : \Type) (n : Nat) \with
+      | A, zero => leaf
+      | A, suc n => node A (CTree A n) (CTree A n)
+
+    \func test-CTree : CTree Nat 1 => node 1 leaf leaf
+
+    \func test-CTree' : CTree Nat 2 => node 2 test-CTree test-CTree
+  }
 }
