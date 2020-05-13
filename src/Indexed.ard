@@ -1,0 +1,384 @@
+\import Basics (Data, Lists)
+\import Paths (pmap)
+\import Proofs (Propositions)
+\import Logic (Not)
+
+\module Sort \where {
+  \open Data (Bool, true, false)
+  \open Lists (List, nil, cons)
+  \open Nat (+)
+
+  \func if {A : \Type} (b : Bool) (t e : A) : A \elim b
+    | true => t
+    | false => e
+
+  \func sort {A : \Type} (less : A -> A -> Bool) (xs : List A) : List A \elim xs
+    | nil => nil
+    | cons x xs => insert less x (sort less xs)
+    \where
+      \func insert {A : \Type} (less : A -> A -> Bool) (x : A) (xs : List A) : List A \elim xs
+        | nil => cons x nil
+        | cons x' xs => if (less x x') (cons x (cons x' xs)) (cons x' (insert less x xs))
+
+  {-
+  \func isLinOrder {A : \Type} (lessOrEq : A -> A -> Bool) : \Type => {?}
+  \func isSorted {A : \Type} (lessOrEq : A -> A -> Bool) (xs : List A) : \Type => {?}
+  \func isPerm {A : \Type} (xs xs' : List A) : \Type => {?}
+  \func sort-isCorrect {A : \Type} (lessOrEq : A -> A -> Bool) (p : isLinOrder lessOrEq) (xs : List A)
+    : \Sigma (isSorted lessOrEq (sort lessOrEq xs)) (isPerm xs (sort lessOrEq xs)) => {?}
+  -}
+
+  \func reverse {A : \Type} (xs : List A) : List A => rev nil xs
+    \where
+      \func rev {A : \Type} (acc xs : List A) : List A \elim xs
+        | nil => acc
+        | cons x xs => rev (cons x acc) xs
+
+  \func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs => rev-isInv nil xs
+    \where
+      \func rev-isInv {A : \Type} (acc xs : List A) : reverse (reverse.rev acc xs) = reverse.rev xs acc \elim xs
+        | nil => idp
+        | cons x xs => rev-isInv (cons x acc) xs
+
+  \func +-assoc (x y z : Nat) : (x + y) + z = x + (y + z) \elim z
+    | 0 => idp
+    | suc z => pmap suc (+-assoc x y z)
+}
+
+\module Vector \where {
+  \open Nat (+)
+
+  \module Exercise1 \where {
+    \open Lists (List, nil, cons, /)
+    \open Data (unit)
+    \open Data.Exercise5 (<)
+    \open Propositions (T)
+
+    \func length {A : \Type} (xs : List A) : Nat
+      | nil => 0
+      | cons a xs => suc (length xs)
+
+    -- Implement the function lookup, which takes a list xs and a natural number n and returns the n-th element in the
+    -- list. The function should also take a proof that n is in the right range: T (n < length xs).
+
+    \func lookup {A : \Type} (n : Nat) (xs : List A) (p : T (n < length xs)) : A \elim n, xs
+      | 0, cons x xs => x
+      | suc n, cons x xs => lookup n xs p
+
+    \func lookup-test : lookup (2) (1 / 2 / 3 / nil) unit = 3 => idp
+  }
+
+  \func vec (A : \Type) (n : Nat) : \Type \elim n
+    | 0 => \Sigma
+    | suc n => \Sigma A (vec A n)
+
+  \func head {A : \Type} (n : Nat) (xs : vec A (suc n)) => xs.1
+
+  \func tail {A : \Type} (n : Nat) (xs : vec A (suc n)) => xs.2
+
+  \data Vec (A : \Type) (n : Nat) \elim n
+    | 0 => fnil
+    | suc n => fcons A (Vec A n)
+
+  \func \infixr 5 / {A : \Type} {n : Nat} (x : A) (xs : Vec A n) => fcons x xs
+
+  \func Head {A : \Type} {n : Nat} (xs : Vec A (suc n)) : A \elim xs
+    | fcons x _ => x
+
+  \func Tail {A : \Type} {n : Nat} (xs : Vec A (suc n)) : Vec A n \elim xs
+    | fcons _ xs => xs
+
+  \data Maybe (A : \Type) | nothing | just A
+
+  \func first {A : \Type} {n : Nat} (xs : Vec A n) : Maybe A \elim n, xs
+    | 0, fnil => nothing
+    | suc n, fcons x xs => just x
+
+  \func append {A : \Type} {n m : Nat} (xs : Vec A n) (ys : Vec A m) : Vec A (m + n) \elim n, xs
+    | 0, fnil => ys
+    | suc _ , fcons x xs => fcons x (append xs ys)
+
+  \module Exercise2 \where {
+    \func replicate-vec {A : \Type} (a : A) (n : Nat) : (vec A n) \elim n
+      | 0 => ()
+      | suc n => (a, replicate-vec a n)
+
+    \func replicate {A : \Type} (a : A) (n : Nat) : (Vec A n) \elim n
+      | 0 => fnil
+      | suc n => a / replicate a n
+  }
+
+  \module Exercise3 \where {
+    \func map-vec {A B : \Type} {n : Nat} (f : A -> B) (as : vec A n) : vec B n \elim n
+      | 0 => ()
+      | suc n => (f as.1, map-vec f as.2)
+
+    \func map {A B : \Type} {n : Nat} (f : A -> B) (as : Vec A n) : Vec B n \elim n, as
+      | 0, _ => fnil
+      | suc n, fcons a as => f a / map f as
+  }
+
+  \module Exercise4 \where {
+    \func zipWith-vec {A B C : \Type} {n : Nat} (f : A -> B -> C) (as : vec A n) (bs : vec B n) : vec C n \elim n
+      | 0 => ()
+      | suc n => (f as.1 bs.1, zipWith-vec f as.2 bs.2)
+
+    \func zipWith {A B C : \Type} {n : Nat} (f : A -> B -> C) (as : Vec A n) (bs : Vec B n) : Vec C n \elim n
+      | 0 => fnil
+      | suc n => \case as, bs \with {
+        | fcons a as, fcons b bs => f a b / zipWith f as bs
+      }
+  }
+
+  \func length {A : \Type} {n : Nat} (xs : Vec A n) => n
+}
+
+\module Finite \where {
+  \open Propositions (T)
+  \open Data.Exercise5 (<)
+  \open Data (Empty, unit)
+  \open Vector (Maybe, just, nothing, Vec, fcons, fnil, /)
+  \open Proofs.CurryHoward (||, inl, inr)
+
+  \func fin (n : Nat) => \Sigma (x : Nat) (T (x < n))
+
+  \func Fin' (n : Nat) : \Set0
+    | 0 => Empty
+    | suc n => Maybe (Fin' n)
+
+  \data Fin (n : Nat) \with
+    | suc n => { fzero | fsuc (Fin n) }
+
+  \func absurd {A : \Type} (x : Fin 0) : A
+
+  \func fin0 : Fin 3 => fzero
+
+  \func fin1 : Fin 3 => fsuc fzero
+
+  \func fin2 : Fin 3 => fsuc (fsuc fzero)
+
+  \func atMost3 (x : Fin 3) : (x = fin0) || (x = fin1) || (x = fin2) \elim x
+    | fzero => inl idp
+    | fsuc fzero => inr (inl idp)
+    | fsuc (fsuc fzero) => inr (inr idp)
+    | fsuc (fsuc (fsuc ()))
+
+  \func toNat {n : Nat} (x : Fin n) : Nat
+    | {suc _}, fzero => 0
+    | {suc _}, fsuc x => suc (toNat x)
+
+  \func toNat-test : toNat {10} (fsuc fzero) = 1 => idp
+
+  \func lookup {A : \Type} {n : Nat} (xs : Vec A n) (i : Fin n) : A \elim n, xs, i
+    | suc _, fcons x _, fzero => x
+    | suc _, fcons _ xs, fsuc i => lookup xs i
+
+  \func lookup-test : lookup (3 / 2 / 1 / fnil) (fsuc (fsuc fzero)) = 1 => idp
+
+  \module Exercise5 \where {
+    \open Data (unit)
+    \open Vector.Exercise3 (map)
+    \open Nat (+)
+
+    \func toFin (n : Nat) : Fin (suc n)
+      | 0 => fzero
+      | suc n => fsuc (toFin n)
+
+    \func superset {n : Nat} (f : Fin n) : Fin (suc n)
+      | {suc n}, fzero => fzero
+      | {suc n}, fsuc f => fsuc (superset f)
+
+    \func superset-test : Fin 4 => superset fin2
+
+    \func superset-test' : toNat fin2 = toNat (superset fin2) => idp
+
+    \func push {A : \Type} {n : Nat} (a : A) (v : Vec A n) : Vec A (suc n) \elim n, v
+      | 0, fnil => fcons a fnil
+      | suc n, fcons a' v => fcons a' (push a v)
+
+    \func push-test : push 3 (1 / 2 / fnil) = 1 / 2 / 3 / fnil => idp
+
+    \func every (n : Nat) : Vec (Fin n) n
+      | 0 => fnil
+      | suc n => push (toFin n) (map superset (every n))
+
+    \func every-test : every 2 =  fzero / fsuc fzero / fnil => idp
+
+    -- Functions Fin n -> A correspond to lists of length n with elements in A. Implement the function that
+    -- converts an element of Fin n -> A to element of Vec A n.
+
+    \func toVec {A : \Type} {n : Nat} (f : Fin n -> A) : Vec A n => map f (every n)
+
+    \func toVec-test : toVec list? = 1 / 1 / 2 / 3 / 5 / fnil => idp
+      \where
+        \func list? (n : Fin 5) : Nat
+          | fzero => 1
+          | fsuc fzero => 1
+          | fsuc (fsuc fzero) => 2
+          | fsuc (fsuc (fsuc fzero)) => 3
+          | fsuc (fsuc (fsuc (fsuc fzero))) => 5
+          | fsuc (fsuc (fsuc (fsuc (fsuc ()))))
+  }
+
+  \module Exercise6 \where {
+    \open Vector (Head, Tail)
+    \open Vector.Exercise2 (replicate)
+    \open Vector.Exercise3 (map)
+    \open Vector.Exercise4 (zipWith)
+    \open Exercise5 (superset, push, every)
+    \open Nat (-)
+
+    \func asFin (y x : Nat) (p : T (x < y)) : Fin y \elim y, x, p
+      | 0, 0, ()
+      | suc y, 0, unit => fzero
+      | suc y, suc x, p => fsuc (asFin y x p)
+
+    \func asFin-test : Fin 4 => asFin 4 2 unit
+
+    -- Define the type of matrices and a number of functions for them:
+    -- the diagonal matrix, transpose, addition and multiplication of matrices.
+
+    \func Matrix (A : \Type) (c r : Nat) => Vec (Vec A c) r
+
+    \func diagonal {n : Nat} (v : Vec Nat n) : Matrix Nat n n
+      | {0}, fnil => fnil
+      | {suc n}, fcons a v =>
+        \let
+          | prev => map (/ 0) (diagonal v)
+          | newRow => a / replicate 0 n
+        \in newRow / prev
+
+    \func diagonal-test
+      : diagonal (1 / 2 / 3 / fnil)
+      = (1 / 0 / 0 / fnil) /
+        (0 / 2 / 0 / fnil) /
+        (0 / 0 / 3 / fnil) /
+        fnil => idp
+
+    \func transpose {A : \Type} {n m : Nat} (xss : Matrix A n m) : Matrix A m n \elim n, m, xss
+      | 0, 0, fnil => fnil
+      | 0, suc m, fcons a v => fnil
+      | suc n, 0, fnil => replicate fnil (suc n)
+      | suc n, suc m, fcons (fcons x xs) xss => (x / map Head xss) / (transpose (xs / map Tail xss))
+
+    \func matrix : Matrix Nat 3 3 => (
+      (1 / 2 / 3 / fnil) /
+      (4 / 5 / 6 / fnil) /
+      (7 / 8 / 9 / fnil) /
+      fnil
+    )
+
+    \func transpose-test
+      : transpose matrix
+      = (
+          (1 / 4 / 7 / fnil) /
+          (2 / 5 / 8 / fnil) /
+          (3 / 6 / 9 / fnil) /
+          fnil
+        ) => idp
+
+    \func \infixl 6 + {n m : Nat} (xss : Matrix Nat n m) (yss : Matrix Nat n m) : Matrix Nat n m
+      | {_}, {0}, _, _ => fnil
+      | {0}, {m}, _, _ => replicate fnil m
+      | {suc n}, {suc m}, fcons xs xss, fcons ys yss => zipWith (Nat.+) xs ys / xss + yss
+
+    \func +-test
+      : diagonal (2 / 4 / 8 / fnil) + diagonal (2 / 4 / 8 / fnil)
+      = diagonal (4 / 8 / 16 / fnil) => idp
+
+    \func reduce {A B : \Type} {n : Nat} (f : B -> A -> B) (b : B) (v : Vec A n) : B \elim n, v
+      | 0, fnil => b
+      | suc n, fcons a v => reduce f (f b a) v
+
+    \func row {A : \Type} {n m : Nat} (r : Fin m) (xss : Matrix A n m) : Vec A n => lookup xss r
+
+    \func row-test : row (asFin 3 2 unit) matrix = 7 / 8 / 9 / fnil => idp
+
+    \func col {A : \Type} {n m : Nat} (c : Fin n) (xss : Matrix A n m) : Vec A m => lookup (transpose xss) c
+
+    \func col-test : col (asFin 3 1 unit) matrix = 2 / 5 / 8 / fnil => idp
+
+    \func build {A : \Type} (c r : Nat) (f : Fin c -> Fin r -> A) : Matrix A c r \elim r
+      | 0 => fnil
+      | suc m =>
+        \let
+          | row => map (\lam c' => f c' (asFin (suc m) m p)) (every c)
+        \in push row (build c m (\lam n m => f n (superset m)))
+      \where
+        \func p {n : Nat} : T (n < suc n)
+          | {0} => unit
+          | {suc n} => p {n}
+
+    \func build-test
+      : build 2 2 (\lam c r => (toNat c, toNat r))
+      = (
+          ((0, 0) / (1, 0) / fnil) /
+          ((0, 1) / (1, 1) / fnil) /
+          fnil
+        ) => idp
+
+    \func \infixl 7 * {n m l : Nat} (xss : Matrix Nat n m) (yss : Matrix Nat l n) : Matrix Nat l m =>
+      build l m (
+        \lam c r =>
+            \let
+              | prods => zipWith (Nat.*) (row r xss) (col c yss)
+            \in reduce (Nat.+) 0 prods
+      )
+
+    \func *-test => ()
+      \where {
+        \func A => (
+          (0 / 1 / fnil) /
+          (0 / 0 / fnil) /
+          fnil
+        )
+
+        \func B => (
+          (0 / 0 / fnil) /
+          (1 / 0 / fnil) /
+          fnil
+        )
+
+        \func C => (
+          (1 / 0 / fnil) /
+          (0 / 0 / fnil) /
+          fnil
+        )
+
+        \func D => (
+          (0 / 0 / fnil) /
+          (0 / 1 / fnil) /
+          fnil
+        )
+
+        \func A*B=C : A * B = C => idp
+
+        \func B*A=D : B * A = D => idp
+
+        \func dist : A * (B + C) = A * B + A * C => idp
+
+        \func dist' : (B + C) * D = B * D + C * D => idp
+
+        \func F => (
+          (1 / 2 / 3 / fnil) /
+          (4 / 5 / 6 / fnil) /
+          fnil
+        )
+
+        \func G => (
+          (7 / 8 / fnil) /
+          (9 / 10 / fnil) /
+          (11 / 12 / fnil) /
+          fnil
+        )
+
+        \func F*G
+          : F * G
+          = (
+              (58 / 64 / fnil) /
+              (139 / 154 / fnil) /
+              fnil
+            ) => idp
+      }
+  }
+}

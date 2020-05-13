@@ -1,0 +1,204 @@
+\import Logic (Empty, Not)
+\import Basics (Data, Lists)
+
+\module CurryHoward \where {
+  \open Data (Unit, unit)
+
+  \func absurd {A : \Type} (e : Empty) : A
+
+  \func absurd' {A : \Type} (e : Empty) : A \elim e
+    | ()
+
+  \func Unit-isTrue : Unit => unit
+
+  \module Exercise1 \where {
+    \func proof {P Q R : \Type} : (P -> Q -> R) -> (P -> Q) -> P -> R =>
+      \lam pqr pq p => pqr p (pq p)
+  }
+
+  \module Exercise2 \where {
+    \func proof {P Q R : \Type} : ((P -> Q -> R) -> P) -> (P -> R) -> R =>
+      \lam pqrp pr => pr (pqrp (\lam p _ => pr p))
+  }
+
+  \func \infixr 3 && (P Q : \Type) => \Sigma P Q
+
+  \func &&-intro {P Q : \Type} (p : P) (q : Q) : \Sigma P Q => (p, q)
+
+  \func &&-elim1 {P Q : \Type} (t : \Sigma P Q) : P => t.1
+
+  \func &&-elim2 {P Q : \Type} (t : \Sigma P Q) : Q => t.2
+
+  \module Exercise3 \where {
+    \func proof {P Q R : \Type} : ((P && Q) -> R) -> P -> Q -> R =>
+      \lam pnqr p q => pnqr (p, q)
+  }
+
+  \module Exercise4 \where {
+    \func proof {P Q R : \Type} : (P -> Q -> R) -> (P && Q) -> R =>
+      \lam pqr pnq => pqr pnq.1 pnq.2
+  }
+
+  \data \infixr 2 || (P Q : \Type)
+    | inl P
+    | inr Q
+
+  \func ||-intro1 {P Q : \Type} (p : P) : P || Q => inl p
+
+  \func ||-intro2 {P Q : \Type} (q : Q) : P || Q => inr q
+
+  \func ||-elim {P Q R : \Type} (l : P -> R) (r : Q -> R) (x : P || Q) : R \elim x
+    | inl p => l p
+    | inr q => r q
+
+  \module Exercise5 \where {
+    \func proof {P Q R : \Type} : (P -> R) -> (Q -> R) -> P || Q -> R => ||-elim
+  }
+
+  \module Exercise6 \where {
+    \func proof {P Q R : \Type} : ((P || Q) -> (P && Q)) -> ((P -> Q) && (Q -> P)) =>
+      \lam poqpnq =>
+          ( \lam p => (poqpnq (inl p)).2
+          , \lam q => (poqpnq (inr q)).1
+          )
+  }
+
+  \module Exercise7 \where {
+    {-
+    Russell’s paradox shows that there is no set of all sets. If such a set exists,
+    then we can form the set B of sets which are not members of themselves. Then B
+    belongs to itself if and only if it is not. This implies a contradiction.
+    Cantor’s theorem states that there is no set X with a surjection from X onto
+    the set of subsets of X. Its proof also constructs a proposition which is true
+    if and only if it is false. Prove that more generally the existence of any such
+    proposition implies a contradiction.
+    -}
+
+    \func proof {P : \Type} : (P -> Not P) -> (Not P -> P) -> Empty =>
+      \lam pnp npp =>
+          \let
+            | p : P => npp (\lam p => pnp p p)
+          \in pnp p p
+  }
+
+  \module Exercise8 \where {
+    -- Prove that if, for every x : Nat, P x is true, then there exists x : Nat such that P x is true.
+
+    \func proof (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) =>
+      (0, h 0)
+  }
+
+  \module Exercise9 \where {
+    -- Prove that if there is no x : Nat such that P x holds, then P 3 is false.
+
+    \func proof (P : Nat -> \Type) (h : Not (\Sigma (x : Nat) (P x))) : Not (P 3) =>
+      \lam p3 => h (3, p3)
+  }
+
+  \module Exercise10 \where {
+    -- Prove that if, for every x : Nat, P x implies Q x, then the existence
+    -- of an element x : Nat for which P x is true implies the existence of
+    -- an element x : Nat for which Q x is true.
+
+    \func proof (P Q : Nat -> \Type)
+                (p : \Pi (x : Nat) -> (P x -> Q x))
+                (s : \Sigma (x : Nat) (P x))
+      : \Sigma (x : Nat) (Q x) => (s.1, p s.1 s.2)
+  }
+
+  \module Exercise11 \where {
+    -- Prove that if, for every x : Nat, either P x is false or Q x is false,
+    -- then P 3 implies that Q 3 is false.
+
+    \func proof (P Q : Nat -> \Type)
+                (p : \Pi (x : Nat) -> Not (P x) || Not (Q x))
+      : (P 3) -> (Not (Q 3)) =>
+      \lam p3 => sub p3 (p 3)
+      \where {
+        \func sub {P Q : \Type} : P -> (Not P) || (Not Q) -> Not Q =>
+          \lam p nponq => \case nponq \with {
+            | inl np => absurd (np p)
+            | inr nq => nq
+          }
+      }
+  }
+}
+
+\module Propositions \where {
+  \open Data (Bool, Unit, true, false, unit, not)
+
+  \func T (b : Bool) : \Type
+    | true => Unit
+    | false => Empty
+
+  \func \infix 4 == (x y : Bool) : Bool
+    | true, true => true
+    | false, false => true
+    | _ , _ => false
+
+  \func not-isInvolution (x : Bool) : T (not (not x) == x)
+    | true => unit
+    | false => unit
+
+  \func ==-refl (x : Bool) : T (x == x)
+    | true => unit
+    | false => unit
+
+  \func lemma (x : Bool) : \Sigma (y : Bool) (T (x == y)) => (x, ==-refl x)
+
+  \func higherOrderFunc (f : \Pi (x : Bool) -> T (x == x)) : T (true == true) => f true
+
+  \module Exercise12 \where {
+    \func and (x y : Bool) : Bool
+      | true, true => true
+      | _, _ => false
+
+    \func or (x y : Bool) : Bool
+      | _, true => true
+      | true, _ => true
+      | _, _ => false
+
+    -- Prove associativity of and and or.
+
+    \func and-assoc (x y z : Bool) : (x `and` y) `and` z = x `and` (y `and` z)
+      | true, true, true => idp
+      | true, true, false => idp
+      | true, false, true => idp
+      | true, false, false => idp
+      | false, true, true => idp
+      | false, true, false => idp
+      | false, false, true => idp
+      | false, false, false => idp
+
+    \func or-assoc (x y z : Bool) : (x `or` y) `or` z = x `or` (y `or` z)
+      | true, true, true => idp
+      | true, true, false => idp
+      | true, false, true => idp
+      | true, false, false => idp
+      | false, true, true => idp
+      | false, true, false => idp
+      | false, false, true => idp
+      | false, false, false => idp
+  }
+
+  \module Exercise13 \where {
+    \open Nat (*)
+
+    -- Prove that 2 * 2 equals to 4.
+
+    \func proof : 2 * 2 = 4 => idp
+  }
+
+  \module Exercise14 \where {
+    \open Lists (List,nil,cons,++)
+
+    \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' =>
+      path (\lam i => f (p @ i))
+
+    -- Prove associativity of the list concatenation.
+
+    \func ++-assoc {A : \Type} (x y z : List A) : (x ++ y) ++ z = x ++ (y ++ z)
+      | nil, xs, ys => idp
+      | cons a x, y, z => pmap (cons a) (++-assoc x y z)
+  }
+}

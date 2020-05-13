@@ -1,0 +1,271 @@
+\module Functions \where {
+  \func f => 0
+
+  \func f' : Nat => 0
+
+  \func id (x : Nat) => x
+
+  \func id' (x : Nat) : Nat => x
+
+  \func foo (x _ : Nat) (_ : Int) : Nat => x
+
+  \func foo' => \lam (x _ : Nat) (_ : Int) => x
+
+  \func foo'' : Nat -> Nat -> Int -> Nat => \lam x _ _ => x
+}
+
+\module Infix \where {
+  \func \infixl 6 $$ (x y : Nat) => x
+
+  \func test => 3 $$ 7
+
+  \func ff (x y : Nat) => x
+
+  \func ff_test => 0 `ff` 1
+
+  \func \infix 6 %% (x y : Nat) => x
+
+  \func %%-test => %% 3 7
+
+  \module Exercise1 \where {
+    \func f1 (x y : Nat): Nat => x
+
+    \func f2 : Nat => 0
+
+    \func \infix 1 f3 (f : Nat -> Nat) (z : Nat) : Int => 0
+
+    \func f4 : Nat => 0
+
+    \func \infix 2 f5 : Nat -> Nat -> Nat => f1
+
+    \func f6 : Nat => f4
+
+    \func f-test => f1 f2 f3 f4 f5 f6
+  }
+}
+
+\module Data \where {
+  \data Empty
+
+  \data Unit | unit
+
+  \data Bool
+    | true
+    | false
+
+  \func not (x : Bool) : Bool \with
+    | true => false
+    | false => true
+
+  \func if (x : Bool) (t e : Nat) : Nat \elim x
+    | true => t
+    | false => e
+
+  \data BinNat
+    | zero
+    | sh+1 BinNat
+    | sh+2 BinNat
+
+  \module Exercise2 \where {
+    \func if {A : \Type} (x : Bool) (t e : A) : A \elim x
+      | true => t
+      | false => e
+  }
+
+  \module Exercise3 \where {
+    \open Exercise2 (if)
+
+    \func \infix 1 || (x y : Bool) : Bool => if x true y
+
+    \func test-|| : (false || true) = true => idp
+  }
+
+  \module Exercise4 \where {
+    \open Nat (*)
+
+    \func \infixr 8 ^ (x y : Nat): Nat \elim y
+      | 0 => 1
+      | suc y => x * (x ^ y)
+
+    \func test-^ : 2 ^ 10 = 1024 => idp
+
+    \func fac (x : Nat) : Nat
+      | 0 => 1
+      | suc x => (suc x) * (fac x)
+
+    \func test-fac : fac 5 = 120 => idp
+  }
+
+  \module Exercise5 \where {
+    \func \infix 2 < (x y : Nat) : Bool
+      | 0, 0 => false
+      | 0, suc y => true
+      | suc x, 0 => false
+      | suc x, suc y => x < y
+
+    \func \infix 2 - (x y : Nat) : Nat
+      | 0, 0 => 0
+      | 0, suc y => 0
+      | suc x, 0 => suc x
+      | suc x, suc y => x - y
+
+    \func test-- : 3 - 4 = 0 => idp
+
+    \func mod (x y : Nat) : Nat => mod' x x y
+      \where
+        \func mod' (s x y : Nat) : Nat \elim s
+          | 0 => 0
+          | suc s => if (x < y) x (mod' s (x - y) y)
+
+    \func test-mod : 10 `mod` 3 = 1 => idp
+
+    \func gcd (x y : Nat): Nat => gcd' x x y
+      \where
+        \func gcd' (s x y : Nat) : Nat \elim s
+          | 0 => 0
+          | suc s => if (x < y) (gcd' s x (y - x)) (if (y < x) (gcd' s (x - y) y) (x))
+
+    \func test-gcd1 : gcd 48 180 = 12 => idp
+
+    \func test-gcd2 : gcd 42 56 = 14 => idp
+
+    \func test-gcd3 : gcd 54 24 = 6 => idp
+
+    \func test-gcd4 : gcd 8 12 = 4 => idp
+  }
+}
+
+\module TerminationPolymorphismImplicit \where {
+  \open Data (if)
+  \open Data.Exercise5 (<, -)
+  \open Nat (+)
+
+  \func div (x y : Nat) => div' x x y
+    \where
+      \func div' (s x y : Nat) : Nat \elim s
+        | 0 => 0
+        | suc s => if (x < y) 0 (suc (div' s (x - y) y))
+
+  \func id (A : \Type) (a : A) => a
+
+  \func idType : \Pi (A : \Type) (a : A) -> A => id
+
+  \func idTest => id _ 0
+
+  \func id' {A : \Type} (a : A) => a
+
+  \func id'Test => id' 0
+
+  \func id'Test' => id' {Nat} 0
+
+  \func example' {n : Nat} (p : n + n = 3) => 0
+
+  \func example'' {n m : Nat} (p : suc n = m) => 0
+
+  \func example''Test (pp : 8 = 3) => example'' pp
+}
+
+\module Lists \where {
+  \data List (A : \Type) | nil | cons A (List A)
+
+  \func emptyList => nil {Nat}
+
+  \func \infixl 6 ++ {A : \Type} (xs ys : List A) : List A \elim xs
+    | nil => ys
+    | cons x xs => cons x (xs ++ ys)
+
+  \func \infixr 5 / {A : \Type} (x : A) (xs : List A) => cons x xs
+
+  \func test-list : List Nat => 2 / 3 / 4 / nil
+
+  \module Exercise6 \where {
+    \open Data (true, false)
+    \open Data.Exercise5 (<)
+
+    \func map {A B : \Type} (f : A -> B) (xs : List A): List B \elim xs
+      | nil => nil
+      | cons a xs => cons (f a) (map f xs)
+
+    \func test-map :
+      map (\lam x => x < 10)
+          (3 / 5 / 10 / nil)
+        = (true / true / false / nil) => idp
+  }
+
+  \module Exercise7 \where {
+    \func matrix1 => ((1 / 2 / nil) / (3 / 4 / nil) / nil)
+
+    \func matrix2 => ((1 / 2 / nil) / (3 / 4 / nil) / (5 / 6 / nil) / nil)
+
+    \func heads {A : \Type} (xs : List (List A)) : List A
+      | nil => nil
+      | cons x xs => \case x \with {
+        | nil => heads xs
+        | cons h _ => h / heads xs
+      }
+
+    \func test-heads : heads matrix1
+      = (1 / 3 / nil) => idp
+
+    \func tails {A : \Type} (xs : List (List A)) : List (List A)
+      | nil => nil
+      | cons x xs => \case x \with {
+        | nil => tails xs
+        | cons _ t => t / tails xs
+      }
+
+    \func test-tails : tails matrix1
+      = ((2 / nil) / (4 / nil) / nil) => idp
+
+    \func transpose {A : \Type} (xss : List (List A)) : List (List A) => transpose' xss xss
+      \where
+        \func transpose' {A B : \Type} (cs : List B) (xss : List (List A)) : List (List A)
+        \elim cs
+          | nil => nil
+          | cons c cs => \case xss \with {
+            | nil => nil
+            | cons nil xss => transpose' cs xss
+            | cons (cons x xs) xss => (x / heads xss) / (transpose' cs (xs / (tails xss)))
+          }
+
+    \func test-transpose1 : transpose matrix1
+      = ((1 / 3 / nil) / (2 / 4 / nil) / nil) => idp
+
+    \func test-transpose2 : transpose matrix2
+      = ((1 / 3 / 5 / nil) / (2 / 4 / 6 / nil) / nil) => idp
+  }
+}
+
+\module Tuples \where {
+  \open Data (Bool, true, false)
+  \open Data.Exercise2 (if)
+  \open Nat (<=, zero<=_, suc<=suc, *)
+
+  \func sigma1 (s : \Sigma (A : \Type) (A -> A)) => s
+
+  \func test-sigma1 => sigma1 (Nat, (\lam n => suc n))
+
+  \func sigma2 (s : \Sigma (b : Bool) (if b Nat Bool)) => s
+
+  \func test-sigma2 => sigma2 (true,7)
+
+  \func test-sigma2' => sigma2 (false,false)
+
+  \func sigma3 (s : \Sigma (n : Nat) (n <= 10)) => s
+
+  \func test-sigma3 => sigma3 (3,p) \where
+    \func p : 3 <= 10 => suc<=suc (suc<=suc (suc<=suc zero<=_))
+
+  \func sigma4 (s : \Sigma (n : Nat) (\Sigma (k : Nat) (n = k * k))) => s
+
+  \func test-sigma4 => sigma4 (4,(2,p)) \where
+    \func p : 4 = 2 * 2 => idp
+
+  \func access : 4 = 2 * 2 => test-sigma4.2.2
+}
+
+\module Alias \where {
+  \open Lists (List)
+
+  \func Nat[] => List Nat
+}
