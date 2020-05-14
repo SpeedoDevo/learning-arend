@@ -386,12 +386,39 @@
     -- Define the type CTree A n of (complete and full) binary trees of height precisely n,
     -- which store elements in internal nodes, but not in leaves. The height of a leaf is 0.
 
-    \data CTree (A : \Type) (n : Nat) \with
-      | A, zero => leaf
-      | A, suc n => node A (CTree A n) (CTree A n)
+    \data CTree (A : \Type) (n : Nat) \elim n
+      | zero => leaf
+      | suc n => node A (CTree A n) (CTree A n)
 
-    \func test-CTree : CTree Nat 1 => node 1 leaf leaf
+    \func CTree-test : CTree Nat 1 => node 1 leaf leaf
 
-    \func test-CTree' : CTree Nat 2 => node 2 test-CTree test-CTree
+    \func CTree-test' : CTree Nat 2 => node 2 CTree-test CTree-test
+  }
+
+  \module Exercise8 \where {
+    \open Sort (if)
+    \open Exercise6 (asFin)
+
+    -- Define the type Tree A n of binary trees of height at most n,
+    -- which store elements in internal nodes, but not in leaves.
+    -- The height of a leaf is 0. Define the function that computes the height of a tree.
+
+    \data Tree (A : \Type) {n : Nat} (f : Fin n) \elim n, f
+      | suc n, fzero => leaf
+      | suc n, fsuc f => node A {lf : Fin n} (l : Tree A lf) {rf : Fin n} (r : Tree A rf)
+
+    \func leaf-test : Tree Nat {8} fzero => leaf
+
+    \func node-test : Tree Nat {9} (fsuc fzero) => node 100 leaf leaf-test
+
+    \func Tree-test : Tree Nat {10} (fsuc (fsuc fzero)) => node 200 node-test leaf
+
+    \func max (l : Nat) (r : Nat) : Nat => if (l < r) r l
+
+    \func height {A : \Type} {n : Nat} {f : Fin n} (t : Tree A f): Nat \elim n, f, t
+      | suc n, fzero, leaf => 0
+      | suc n, fsuc f, node a l r => suc (max (height l) (height r))
+
+    \func height-test : height Tree-test = 2 => idp
   }
 }
