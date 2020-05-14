@@ -1,0 +1,32 @@
+\module SymmetryTransitivityLeibniz \where {
+  \func Leibniz {A : \Type} {a a' : A}
+                (f : \Pi (P : A -> \Type) -> \Sigma (P a -> P a') (P a' -> P a)) : a = a' =>
+    (f (\lam x => a = x)).1 idp
+
+  \func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+    coe (\lam i => B (p @ i)) b right
+
+  -- symmetry
+
+  \func inv {A : \Type} {a a' : A} (p : a = a') : a' = a =>
+    transport (\lam x => x = a) p idp
+
+  -- transitivity
+
+  \func trans {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' =>
+    transport (\lam x => a = x) q p
+
+  -- congruence
+
+  \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' =>
+    transport (\lam x => f a = f x) p idp
+
+  \module Exercise1 \where {
+    \func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} {b b' : B} (p : a = a') (q : b = b') : f a b = f a' b' =>
+      \let
+        | s : (a, b) = (a', b) => pmap (\lam x => (x, b)) p
+        | t : (a', b) = (a', b') => pmap (\lam x => (a', x)) q
+        | u : (a, b) = (a', b') => trans s t
+      \in transport (\lam xy => f a b = f xy.1 xy.2) u idp
+  }
+}
