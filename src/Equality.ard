@@ -29,4 +29,21 @@
         | u : (a, b) = (a', b') => trans s t
       \in transport (\lam xy => f a b = f xy.1 xy.2) u idp
   }
+
+  \module Exercise2 \where {
+    -- Prove that transport can be defined via pmap and repl and vice versa.
+    -- The function repl says that if two types are equal then there exists a function between them.
+
+    \func repl {A B : \Type} (p : A = B) : A -> B =>
+      \lam a => coe (\lam i => (\lam b => b) (p @ i)) a right
+
+    \func pmap' {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' =>
+      coe (\lam i => (\lam x => f a = f x) (p @ i)) idp right
+
+    \func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+      (repl (pmap' B p)) b
+
+    \func repl' {A B : \Type} (p : A = B) : A -> B =>
+      \lam a => transport (\lam b => b) p a
+  }
 }
