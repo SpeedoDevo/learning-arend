@@ -47,3 +47,32 @@
       \lam a => transport (\lam b => b) p a
   }
 }
+
+\module DefinitionOf= \where {
+  \func idp {A : \Type} {a : A} : a = a => path (\lam _ => a)
+
+  \module Exercise3 \where {
+    -- Prove that left = right without using transport or coe.
+
+    \func proof : left = right => path (\lam i => i)
+  }
+
+  \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' =>
+    path (\lam i => f (p @ i))
+
+  \func pmap-idp {A : \Type} {a a' : A} (p : a = a') : pmap {A} (\lam x => x) p = p => idp
+
+  \module Exercise4 \where {
+    -- Prove that a = {A} a’ and b = {B} b’ implies (a,b) = {\Sigma A B} (a’,b’) without using transport.
+
+    \func proof {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a, b) = (a', b') =>
+      path (\lam i => (p @ i, q @ i))
+  }
+
+  \module Exercise5 \where {
+    -- Prove that p = {\Sigma (x : A) (B x)} p’ implies p.1 = {A} p’.1 without using transport.
+
+    \func proof {A : \Type} {B : A -> \Type} (p p' : \Sigma (x : A) (B x)) (q : p = p') : p.1 = p'.1 =>
+      path (\lam i => (q @ i).1)
+  }
+}
