@@ -1,3 +1,6 @@
+\import Proofs
+\import Basics
+
 \module SymmetryTransitivityLeibniz \where {
   \func Leibniz {A : \Type} {a a' : A}
                 (f : \Pi (P : A -> \Type) -> \Sigma (P a -> P a') (P a' -> P a)) : a = a' =>
@@ -72,7 +75,36 @@
   \module Exercise5 \where {
     -- Prove that p = {\Sigma (x : A) (B x)} p’ implies p.1 = {A} p’.1 without using transport.
 
-    \func proof {A : \Type} {B : A -> \Type} (p p' : \Sigma (x : A) (B x)) (q : p = p') : p.1 = p'.1 =>
+    \func proof {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (q : p = p') : p.1 = p'.1 =>
       path (\lam i => (q @ i).1)
+  }
+}
+
+\module FunctionalExtensionality \where {
+  \open Proofs.CurryHoward (||)
+  \open Basics.Data (Empty)
+
+  \func funExt {A : \Type} (B : A -> \Type) {f g : \Pi (a : A) -> B a}
+               (p : \Pi (a : A) -> f a = g a) : f = g =>
+    path (\lam i => \lam a => p a @ i)
+
+  \func lem : \Pi (X : \Type) -> X || (X -> Empty) => {?}
+
+  \func ugly_num : Nat => \case lem Nat \with {
+    | Left => 0
+    | Right => 1
+  }
+
+  \module Exercise6 \where {
+    \open Basics.Data (Bool, not, true, false)
+
+    -- Prove that (\lam x => not (not x)) = (\lam x => x).
+
+    \func proof {x : Bool} : (\lam x => not (not x)) = (\lam x => x) =>
+      funExt (\lam _ => Bool) (\lam _ => p)
+      \where
+        \func p {b : Bool} : not (not b) = b \elim b
+          | true => idp
+          | false => idp
   }
 }
