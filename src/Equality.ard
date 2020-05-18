@@ -184,4 +184,34 @@
                 (d : D) : P =>
       D-elim (\lam _ => P) c1 c2 c3 d
   }
+
+  \module Exercise10 \where {
+    \open DefinitionOf= (pmap)
+    \open Basics.Lists (List, nil, cons, /)
+
+    -- Define recursor and eliminator for List.
+
+    \func List-elim {A : \Type}
+                    (P : List A -> \Type)
+                    (n : P nil)
+                    (c : \Pi (a : A) (l : List A) (p : P l) -> P (cons a l))
+                    (l : List A) : P l \elim l
+      | nil => n
+      | cons a l => c a l (List-elim P n c l)
+
+    \func List-rec {A : \Type}
+                   (P : \Type)
+                   (n : P)
+                   (c : A -> List A -> P -> P)
+                   (l : List A) : P =>
+      List-elim (\lam _ => P) n c l
+
+    \func \infixl 6 ++ {A : \Type} (l r : List A) : List A =>
+      List-rec (List A) r (\lam x xs ys => x / ys) l
+
+    \func ++-test : (1 / 2 / nil) ++ (3 / 4 / nil) = (1 / 2 / 3 / 4 / nil) => idp
+
+    \func ++-assoc {A : \Type} (x y z : List A) : (x ++ y) ++ z = x ++ (y ++ z) =>
+      List-elim (\lam x' => (x' ++ y) ++ z = x' ++ (y ++ z)) idp (\lam a _ p => pmap (cons a) p) x
+  }
 }
