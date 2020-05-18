@@ -245,3 +245,65 @@
     \func coe0' {B : I -> \Type} (b : B right) : B left => transport B (inv (path (\lam i => i))) b
   }
 }
+
+\module Left=right \where {
+  \func left=i (i : I) : left = i
+    -- | left => idp
+    => coe (\lam i => left = i) idp i
+
+  -- In particular left = right.
+
+  \func left=right : left = right => left=i right
+}
+
+\module Coe&transport \where {
+  \func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+    \let
+      | B' : I -> \Type => \lam i => B (p @ i)
+      | B'-test : B' left = B a => idp
+      | B'-test' : B' right = B a' => idp
+      | t : B' left -> B' right => \lam x => coe B' x right
+    \in t b
+}
+
+\module NonEqualities \where {
+  \open SymmetryTransitivityLeibniz (transport)
+  \open Data (Bool, true, false, Empty, Unit, unit)
+  \open Propositions (T)
+
+  \func true/=false (p : true = false) : Empty => transport T p unit
+
+  {-
+  -- This function does not typecheck!
+  \func TI (b : I) : \Type
+    | left => \Sigma
+    | right => Empty
+  -}
+
+  \module Exercise13 \where {
+    -- Prove that 0 does not equal to suc x.
+
+    \func proof {x : Nat} (p : 0 = suc x) : Empty => transport N p unit
+      \where
+        \func N (n : Nat): \Type
+          | 0 => Unit
+          | suc x => Empty
+  }
+
+  \module Exercise14 \where {
+    \open Eliminators.Exercise7 (fac)
+
+    -- Prove that fac does not equal to suc.
+
+    \func funExt' {A : \Type} (B : A -> \Type) {f g : \Pi (a : A) -> B a}
+                  (p : f = g) : \Pi (a : A) -> f a = g a =>
+      \lam a => path (\lam i => (p @ i) a)
+
+    \func proof (p : suc = fac) : Empty =>
+      transport N ((funExt' (\lam _ => Nat) p) 2) unit
+      \where
+        \func N (n : Nat) : \Type
+          | 3 => Unit
+          | _ => Empty
+  }
+}

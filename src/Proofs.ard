@@ -1,8 +1,7 @@
-\import Logic (Empty, Not)
 \import Basics (Data, Lists)
 
 \module CurryHoward \where {
-  \open Data (Unit, unit)
+  \open Data (Unit, unit, Empty)
 
   \func absurd {A : \Type} (e : Empty) : A
 
@@ -62,6 +61,8 @@
           , \lam q => (poqpnq (inr q)).1
           )
   }
+
+  \func Not (A : \Type) => A -> Empty
 
   \module Exercise7 \where {
     {-
@@ -125,7 +126,7 @@
 }
 
 \module Propositions \where {
-  \open Data (Bool, Unit, true, false, unit, not)
+  \open Data (Bool, Unit, true, false, unit, not, Empty)
 
   \func T (b : Bool) : \Type
     | true => Unit
