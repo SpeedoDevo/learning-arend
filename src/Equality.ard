@@ -236,4 +236,12 @@
     \func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
       coe0 (\lam i => B (p @ i)) b
   }
+
+  \module Exercise12 \where {
+    \open SymmetryTransitivityLeibniz (transport, inv)
+
+    -- Define a function B right -> B left.
+
+    \func coe0' {B : I -> \Type} (b : B right) : B left => transport B (inv (path (\lam i => i))) b
+  }
 }
