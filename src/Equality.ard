@@ -214,4 +214,26 @@
     \func ++-assoc {A : \Type} (x y z : List A) : (x ++ y) ++ z = x ++ (y ++ z) =>
       List-elim (\lam x' => (x' ++ y) ++ z = x' ++ (y ++ z)) idp (\lam a _ p => pmap (cons a) p) x
   }
+
+  -- coe
+
+  {-
+    \func I-elim (P : I -> \Type)
+                 (a : P left)
+                 (i : I) : P i \elim i
+      | left => a
+  -}
+
+  \module Exercise11 \where {
+    \open SymmetryTransitivityLeibniz (transport)
+
+    -- We defined transport via coe. It is possible to define a special case of coe via transport.
+    -- Define coe0 (A : I -> \Type) (a : A left) : A right via transport.
+    -- Is it possible to define transport via coe0?
+
+    \func coe0 (A : I -> \Type) (a : A left) : A right => transport A (path (\lam i => i)) a
+
+    \func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
+      coe0 (\lam i => B (p @ i)) b
+  }
 }
