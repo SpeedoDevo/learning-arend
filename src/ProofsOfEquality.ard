@@ -97,3 +97,48 @@
       transport (\lam a => B a.1 a.2) (p->idp (a', p)) b
   }
 }
+
+\module AssociativityOfAppend \where {
+  \open Nat (+)
+  \open SymmetryTransitivityLeibniz (transport, pmap, inv)
+  \open CommutativityOf+ (*>)
+
+  \data Vec (A : \Type) (n : Nat) \elim n
+    | zero => vnil
+    | suc n => vcons A (Vec A n)
+
+  \func \infixl 4 v++ {A : \Type} {n m : Nat} (xs : Vec A n) (ys : Vec A m) : Vec A (m + n) \elim n, xs
+    | 0, vnil => ys
+    | suc n, vcons x xs => vcons x (xs v++ ys)
+
+  \func +-assoc (x y z : Nat) : (x + y) + z = x + (y + z) \elim z
+    | 0 => idp
+    | suc z => pmap suc (+-assoc x y z)
+
+  \func v++-assoc {A : \Type} {n m k : Nat} (xs : Vec A n) (ys : Vec A m) (zs : Vec A k)
+    : (xs v++ ys) v++ zs = transport (Vec A) (+-assoc k m n) (xs v++ (ys v++ zs)) \elim n, xs
+    | 0, vnil => idp
+    | suc n, vcons x xs =>
+      pmap (vcons x) (v++-assoc xs ys zs) *>
+      inv (transport-vcons-comm (+-assoc k m n) x (xs v++ (ys v++ zs)))
+
+  \func transport-vcons-comm {A : \Type} {n m : Nat} (p : n = m) (x : A) (xs : Vec A n)
+    : transport (Vec A) (pmap suc p) (vcons x xs) = vcons x (transport (Vec A) p xs)
+    | idp, _, _ => idp
+
+  \module Exercise2 \where {
+    \func z+-is-id {n : Nat} : 0 + n = n
+      | {0} => idp
+      | {suc n} => pmap suc z+-is-id
+
+    \func v++-vnil-is-id {A : \Type} {n : Nat} (v : Vec A n)
+      : v = transport (Vec A) z+-is-id (v v++ vnil) \elim n, v
+      | 0, vnil => idp
+      | suc n, vcons a v =>
+        \let
+          | rec => v++-vnil-is-id v
+          | mapped => pmap (vcons a) rec
+          | transported => transport-vcons-comm z+-is-id a (v v++ vnil)
+        \in mapped *> (inv transported)
+  }
+}
