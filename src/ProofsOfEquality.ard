@@ -291,4 +291,42 @@
         \func In-nil {A : \Type} {x : A} (p : In x nil) {B : \Type} : B
       }
   }
+
+  \module Exercise5 \where {
+    \data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
+      | refl (x = y)
+      | trans (z : A) (R x z) (ReflTransClosure R z y)
+  }
+
+  \module Exercise6 \where {
+    \open SymmetryTransitivityLeibniz (transport)
+    \open Exercise5 (ReflTransClosure, refl, trans)
+
+    \func \infix 4 <-> {A : \Type} (P Q : A -> A -> \Type) =>
+      \Pi (x y : A) -> \Sigma (P x y -> Q x y) (Q x y -> P x y)
+
+    \func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type)
+                               (r : \Pi (x : A) -> R x x)
+                               (t : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+      : R <-> ReflTransClosure R =>
+      \lam x y => (left r t, right r t)
+      \where {
+        \func left {A : \Type} {R : A -> A -> \Type}
+                   (r : \Pi (x : A) -> R x x)
+                   (t : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+                   {x y : A}
+                   (p : R x y)
+          : ReflTransClosure R x y =>
+          trans y p (refl idp)
+
+        \func right {A : \Type} {R : A -> A -> \Type}
+                    (r : \Pi (x : A) -> R x x)
+                    (t : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+                    {x y : A}
+                    (p : ReflTransClosure R x y)
+          : R x y \elim p
+          | refl p => transport (R x) p (r x)
+          | trans z q p => t x z y q (right r t p)
+      }
+  }
 }
