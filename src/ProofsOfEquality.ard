@@ -1,3 +1,5 @@
+\import Basics
+\import Proofs
 \import Equality
 
 \module CommutativityOf+ \where {
@@ -140,5 +142,132 @@
           | mapped => pmap (vcons a) rec
           | transported => transport-vcons-comm z+-is-id a (v v++ vnil)
         \in mapped *> (inv transported)
+  }
+}
+
+\module Predicates \where {
+  \open Data (Unit, unit, Empty)
+  \open Nat (+)
+  \open SymmetryTransitivityLeibniz (pmap)
+
+  -- Definition of <= via equality.
+
+  \func LessOrEq''' (n m : Nat) => \Sigma (k : Nat) (k + n = m)
+
+  -- Recursive definition of <=.
+
+  \func lessOrEq (n m : Nat) : \Type
+    | 0, _ => Unit
+    | suc _, 0 => Empty
+    | suc n, suc m => lessOrEq n m
+
+  -- First inductive definition of <=.
+
+  \data LessOrEq (n m : Nat) \with
+    | 0, m => z<=n
+    | suc n, suc m => s<=s (LessOrEq n m)
+
+  \func test11 : LessOrEq 0 100 => z<=n
+
+  \func test12 : LessOrEq 3 67 => s<=s (s<=s (s<=s z<=n))
+
+  -- Of course, there is no proof of 1 <= 0.
+  -- \func test10 : LessOrEq 1 0 => ...
+
+  -- Second inductive definition of <=.
+  -- This is a modification of the first inductive definition,
+  -- where we avoid constructor patterns.
+
+  \data LessOrEq' (n m : Nat)
+    | z<=n' (n = 0)
+    | s<=s' {n' m' : Nat} (n = suc n') (m = suc m') (LessOrEq' n' m')
+
+  -- Third inductive definition of <=.
+
+  \data LessOrEq'' (n m : Nat) \elim m
+    | suc m => <=-step (LessOrEq'' n m)
+    | m => <=-refl (n = m)
+
+  \module Exercise3 \where {
+    \open CurryHoward (absurd)
+    \open SymmetryTransitivityLeibniz (transport, inv)
+
+    \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
+
+    \func proof1 {n m : Nat} : LessOrEq n m <-> lessOrEq n m => (left, right)
+      \where {
+        \func left {n m : Nat} (p : LessOrEq n m) : lessOrEq n m \elim n, m, p
+          | 0, 0, z<=n => unit
+          | 0, suc m, z<=n => unit
+          | suc n, suc m, s<=s p => left p
+
+        \func right {n m : Nat} (p : lessOrEq n m) : LessOrEq n m \elim n, m, p
+          | 0, 0, unit => z<=n
+          | 0, suc m, unit => z<=n
+          | suc n, suc m, p => s<=s (right p)
+      }
+
+    \func proof2 {n m : Nat} : LessOrEq n m <-> LessOrEq' n m => (left, right)
+      \where {
+        \func left {n m : Nat} (p : LessOrEq n m) : LessOrEq' n m \elim n, m, p
+          | 0, 0, z<=n => z<=n' idp
+          | 0, suc m, z<=n => z<=n' idp
+          | suc n, suc m, s<=s p => s<=s' idp idp (left p)
+
+        \func right {n m : Nat} (p : LessOrEq' n m) : LessOrEq n m \elim n, p
+          | 0, z<=n' p => z<=n
+          | 0, s<=s' p p1 p2 => z<=n
+          | suc n, z<=n' p => suc-n/=0 p
+          | suc n, s<=s' p idp p2 => transport (\lam n' => LessOrEq n' m) (inv p) (s<=s (right p2))
+      }
+
+    \func proof3 {n m : Nat} : LessOrEq n m <-> LessOrEq'' n m => (left, right)
+      \where {
+        \func left {n m : Nat} (p : LessOrEq n m) : LessOrEq'' n m \elim n, m, p
+          | 0, 0, z<=n => <=-refl idp
+          | 0, suc m, z<=n => <=-step (left z<=n)
+          | suc n, suc m, s<=s p => map-suc (left p)
+          \where
+            \func map-suc {n m : Nat} (p : LessOrEq'' n m) : LessOrEq'' (suc n) (suc m) \elim m, p
+              | 0, <=-refl p => <=-refl (pmap suc p)
+              | suc m, <=-step p => <=-step (map-suc p)
+              | suc m, <=-refl p => <=-refl (pmap suc p)
+
+        \func right {n m : Nat} (p : LessOrEq'' n m) : LessOrEq n m \elim n, m, p
+          | 0, _, _ => z<=n
+          | suc n, 0, <=-refl p => suc-n/=0 p
+          | suc n, suc m, <=-step p => step-LessOrEq (right p)
+          | suc n, suc m, <=-refl p => refl-LessOrEq p
+          \where {
+            \func step-LessOrEq {n m : Nat} (p : LessOrEq n m) : LessOrEq n (suc m) \elim n, m, p
+              | 0, _, _ => z<=n
+              | suc n, suc m, s<=s p => s<=s (step-LessOrEq p)
+
+            \func refl-LessOrEq {n m : Nat} (p : n = m) : LessOrEq n m \elim n, m
+              | 0, _ => z<=n
+              | suc n, 0 => transport (\lam n' => LessOrEq n' 0) (inv p) z<=n
+              | suc n, suc m => s<=s (refl-LessOrEq (pmap cus p))
+          }
+      }
+
+    \func proof4 {n m : Nat} : LessOrEq n m <-> LessOrEq''' n m => (left, right)
+      \where {
+        \func left {n m : Nat} (p : LessOrEq n m) : LessOrEq''' n m \elim n, m, p
+          | 0, 0, z<=n => (0, idp)
+          | 0, suc m, z<=n => (suc m, idp)
+          | suc n, suc m, s<=s p => \let (k, q) => left p \in (k, pmap suc q)
+
+        \func right {n m : Nat} (p : LessOrEq''' n m) : LessOrEq n m \elim n, m, p
+          | 0, _, _ => z<=n
+          | suc n, 0, p => suc-n/=0 p.2
+          | suc n, suc m, p => s<=s (right (p.1, pmap cus p.2))
+      }
+
+    \func cus (n : Nat) : Nat
+      | 0 => 0
+      | suc n => n
+
+    \func suc-n/=0 {n : Nat} (p : suc n = 0) {A : \Type} : A =>
+      absurd (NonEqualities.Exercise13.proof (inv p))
   }
 }
