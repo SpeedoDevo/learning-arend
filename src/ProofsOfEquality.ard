@@ -270,4 +270,25 @@
     \func suc-n/=0 {n : Nat} (p : suc n = 0) {A : \Type} : A =>
       absurd (NonEqualities.Exercise13.proof (inv p))
   }
+
+  \module Exercise4 \where {
+    \open Lists (List, cons, nil, /)
+
+    \data In {A : \Type} (x : A) (xs : List A) \elim xs
+      | cons x' xs => here (x = x')
+      | cons x' xs => there (In x xs)
+
+    \func test-In => ()
+      \where {
+        \func list => 1 / 2 / 3 / nil
+
+        \func In1 : In 1 list => here idp
+
+        \func In2 : In 2 list => there (here idp)
+
+        \func In3 : In 3 list => there (there (here idp))
+
+        \func In-nil {A : \Type} {x : A} (p : In x nil) {B : \Type} : B
+      }
+  }
 }
