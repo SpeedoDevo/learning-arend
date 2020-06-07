@@ -1,0 +1,64 @@
+\import Equality
+
+\module Records \where {
+  \open Nat (+)
+
+  \data NatPair | natPair Nat Nat
+
+  \func natFst (p : NatPair) : Nat
+    | natPair x _ => x
+
+  \func natSnd (p : NatPair) : Nat
+    | natPair _ y => y
+
+  \record NatPair'
+    | fst : Nat
+    | snd : Nat
+
+  \func foo (p : NatPair') => fst {p}
+
+  \func foo' (p : NatPair') => NatPair'.fst {p}
+
+  \func bar (p : NatPair') => p.snd
+
+  \func zeroPair => \new NatPair' {
+    | fst => 0
+    | snd => 0
+  }
+
+  \func etaNatPair' (p : NatPair') : p = \new NatPair' { | fst => p.fst | snd => p.snd } => idp
+
+  \func sum (p : NatPair') => fst {p} + p.snd
+
+  \func sum' (p : NatPair') : Nat
+    | (a, b) => a + b
+
+  \func zeroPair' : NatPair' \cowith
+    | fst => 0
+    | snd => 0
+
+  \module Exercise1 \where {
+    \func swap-cowith (p : NatPair') : NatPair' \cowith
+      | fst => p.snd
+      | snd => p.fst
+
+    \func swap-new-pattern (p : NatPair') : NatPair'
+      | (f, s) => \new NatPair' {
+        | fst => s
+        | snd => f
+      }
+
+    \func swap-new-field (p : NatPair') : NatPair' =>
+      \new NatPair' {
+        | fst => p.snd
+        | snd => p.fst
+      }
+  }
+
+  \module Exercise2 \where {
+    \open Exercise1 (swap-new-pattern \as swap)
+    \open SymmetryTransitivityLeibniz (inv)
+
+    \func swap-involution {p : NatPair'} : swap (swap p) = p => inv (etaNatPair' p)
+  }
+}
