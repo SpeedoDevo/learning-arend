@@ -1,3 +1,4 @@
+\import Basics
 \import Equality
 
 \module Records \where {
@@ -60,5 +61,81 @@
     \open SymmetryTransitivityLeibniz (inv)
 
     \func swap-involution {p : NatPair'} : swap (swap p) = p => inv (etaNatPair' p)
+  }
+}
+
+\module Partials \where {
+  \open Records
+
+  \func PartialEx : \Type => NatPair' { | fst => 0 }
+
+  \func ppp : NatPair' { | fst => 0 } => \new NatPair' { | snd => 1 }
+
+  \func partial (p : NatPair' { | fst => 0 | snd => 1 }) : PartialEx => p
+
+  \func PartialEx' => NatPair' { | fst => 3 | snd => 7 }
+
+  \func new => \new PartialEx'
+}
+
+\module Parameters \where {
+  \record Pair (A B : \Type)
+    | fst : A
+    | snd : B
+
+  \func pairExample : Pair Nat (Nat -> Nat) => \new Pair { | fst => 1 | snd (x : Nat) => x }
+
+  \func pairExample' => \new Pair { | A => Nat | B => Nat -> Nat | fst => 1 | snd (x : Nat) => x }
+
+  \func pairExample'' => \new Pair Nat (Nat -> Nat) 1 (\lam (x : Nat) => x)
+
+  \record NatPair'' (fst'' snd'' : Nat)
+
+  \func natPair''ex => \new NatPair'' {
+    | fst'' => 0
+    | snd'' => 0
+  }
+
+  \record Pair'
+    | A : \Type
+    | B : \Type
+    | fst' : A
+    | snd' : B
+}
+
+\module DependentRecords \where {
+  \data Bool | true | false
+
+  \data T (b : Bool) \with
+    | true => tt
+
+  \func isPos (n : Nat) : Bool
+    | 0 => false
+    | suc _ => true
+
+  \record PosNat (n : Nat) (p : T (isPos n))
+
+  \module Exercise3 \where {
+    \open Data (Empty)
+
+    \func proof (pn : PosNat 0) : Empty =>
+      \case pn.p \with {
+      }
+  }
+
+  \module Exercise4 \where {
+    \open Data.Exercise5 (gcd)
+
+    \record Coprime {
+      | a : Nat
+      | b : Nat
+      | p : gcd a b = 1
+    }
+
+    \func test-Coprime : Coprime => \new Coprime 60 7 idp
+
+    \func Coprime60 => Coprime { | a => 60 }
+
+    \func test-Coprime60 : Coprime60 => \new Coprime { | b => 19 | p => idp }
   }
 }
