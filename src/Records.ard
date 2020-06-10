@@ -391,4 +391,48 @@
       }
     }
   }
+
+  \module Exercise6A \where {
+    \open Exercise5 (Monad)
+
+    \record State (S A : \Type)
+      | state : S -> \Sigma S A
+
+    \instance StateMonad (S : \Type) : Monad (\lam T => State S T)
+      | return a => \new State { | state s => (s, a) }
+      | >>= {A} {B} sa f => \new State {
+        | state s => \let (s', a) => state {sa} s \in state {f a} s'
+      }
+      | left-id a f => idp
+      | right-id {A} sa => idp
+      | bind-assoc sa f g => idp
+  }
+
+  \module Exercise6B \where {
+    \open Exercise5 (Monad)
+
+    \data State (S A : \Type)
+      | state (S -> \Sigma S A)
+      \where {
+        \func runState {S A : \Type} (sa : State S A) (s : S) : \Sigma S A
+          | state s->ssa, s => s->ssa s
+      }
+
+    \instance StateMonad (S : \Type) : Monad (\lam T => State S T)
+      | return a => state (\lam s => (s, a))
+      | >>= sa a->ssb => state (
+        \lam s =>
+            \let (s', a) => runState sa s
+            \in runState (a->ssb a) s'
+      )
+      | left-id a f => state-inv (f a)
+      | right-id sa => state-inv sa
+      | bind-assoc sa f g => idp
+      \where {
+        \open State
+
+        \func state-inv {S A : \Type} (sa : State S A) : state (runState sa) = sa
+          | state s->ssa => idp
+      }
+  }
 }
