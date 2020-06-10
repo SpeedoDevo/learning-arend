@@ -350,31 +350,26 @@
 
   \module Exercise8 \where {
     \open Data (Bool, true, false)
-    \open Data.Exercise2 (if)
     \open Lists (List, cons, nil, /)
     \open Exercise7
 
     \func filter {A : \Type} (fn : A -> Bool) (xs : List A) : List A \elim xs
       | nil => nil
-      | cons a xs => if (fn a) (a / filter fn xs) (filter fn xs)
-
-    \func prove-if {A : \Type}
-                   (P : A -> \Type)
-                   {t : A} {f : A}
-                   (T : P t) (F : P f)
-                   {b : Bool}
-      : P (if b t f) =>
-      \case b \as _b \return P (if _b t f) \with {
-        | true => T
-        | false => F
+      | cons a xs => filter-cons (fn a) a (filter fn xs)
+      \where {
+        \func filter-cons {A : \Type} (b : Bool) (x : A) (ys : List A) : List A \elim b
+          | true => x / ys
+          | false => ys
       }
 
     \func proof {A : \Type} (fn : A -> Bool) (xs : List A) : filter fn xs <= xs \elim xs
       | nil => nil<=_
-      | cons a xs =>
-        \let
-          | r => proof fn xs
-        \in
-          prove-if (\lam l => l <= a / xs) (here idp r) (there r)
+      | cons a xs => proof-cons (fn a) a (filter fn xs) xs (proof fn xs)
+      \where {
+        \func proof-cons {A : \Type} (b : Bool) (a : A) (xs ys : List A) (p : xs <= ys)
+          : filter.filter-cons b a xs <= cons a ys \elim b
+          | true => here idp p
+          | false => there p
+      }
   }
 }

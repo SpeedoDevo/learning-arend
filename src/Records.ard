@@ -418,7 +418,7 @@
           | state s->ssa, s => s->ssa s
       }
 
-    \instance StateMonad (S : \Type) : Monad (\lam T => State S T)
+    \instance StateMonad (S : \Type) : Monad (State S)
       | return a => state (\lam s => (s, a))
       | >>= sa a->ssb => state (
         \lam s =>
