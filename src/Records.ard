@@ -1,5 +1,6 @@
 \import Basics
 \import Equality
+\import ProofsOfEquality
 
 \module Records \where {
   \open Nat (+)
@@ -137,5 +138,257 @@
     \func Coprime60 => Coprime { | a => 60 }
 
     \func test-Coprime60 : Coprime60 => \new Coprime { | b => 19 | p => idp }
+  }
+}
+
+\module Monoid \where {
+  \open CommutativityOf+ (*>)
+
+  \class Monoid (A : \Type)
+    | id : A
+    | \infixl 6 * : A -> A -> A
+    | *-assoc (x y z : A) : (x * y) * z = x * (y * z)
+    | id-left (x : A) : id * x = x
+    | id-right (x : A) : x * id = x
+
+  \func baz (m : Monoid Nat 0 (Nat.+)) => m.*-assoc
+
+  \class CommMonoid \extends Monoid
+    | *-comm (x y : A) : x * y = y * x
+    | id-right x => *-comm x id *> id-left x
+}
+
+\module Classes \where {
+  \open Data (Bool)
+  \open Monoid
+
+  \instance +-NatMonoid : Monoid Nat
+    | id => 0
+    | * => Nat.+
+    | *-assoc => {?}
+    | id-left => {?}
+    | id-right => {?}
+
+  \instance *-NatMonoid : Monoid Nat
+    | id => 1
+    | * => Nat.*
+    | *-assoc => {?}
+    | id-left => {?}
+    | id-right => {?}
+
+  -- alternative definition of the latter:
+
+  \instance *-NatMonoid' : Monoid Nat 1 (Nat.*) {?} {?} {?}
+
+  \func +-test (x : Nat) : 0 Nat.+ x = x => id-left x
+
+  -- error, because +-NatMonoid is inferred, not *-NatMoniod
+  --  \func *-test (x : Nat) : 1 Nat.* x = x => id-left x
+
+  \func instEx => +-NatMonoid.id-left
+
+  \func instExF (M : Monoid) => M.id
+
+  \func instEx' => instExF +-NatMonoid
+
+  \class Eq (A : \Type)
+    | \infix 3 == (x y : A) : Bool
+
+  \func refl {A : \Type} {e : Eq A} (a : A) => a == a
+
+  \func refl' {E : Eq} (a : E) => a == a
+}
+
+\module Coercions \where {
+  \open Monoid
+
+  \func CF-coerce (M : Monoid) (x : M) => x
+
+  \data XXX | con
+
+  \data YYY | con' XXX Nat | con''
+    \where {
+      \use \coerce fromXXX (x : XXX) : YYY => con' x 0
+
+      \use \coerce toXXX (y : YYY) : XXX => con
+    }
+
+  \func fff (y : YYY) => y
+
+  \func ggg => fff con
+
+  \func hhh : Int => 0
+}
+
+\module Extensions \where {
+  \open CommutativityOf+ (*>)
+
+  \record Base (A : \Type)
+
+  \record Base' (A : \Type)
+
+  \record X \extends Base
+    | a : A
+
+  \record Y \extends Base'
+    | b : A
+
+  \record Z \extends X, Y
+
+  \func zzz => \new Z {
+    | A => {?}
+    | a => {?}
+    | Base'.A => {?}
+    | b => {?}
+  }
+
+  \func zzzz (z : Z) => Base'.A {z}
+
+  \record X' \extends Base
+    | aa : A
+
+  \record Y' \extends Base
+    | bb : A
+
+  -- Z' has three fields: aa, bb, A
+
+  \record Z' \extends X', Y'
+
+  \class Monoid (A : \Type) {
+    | ide : A
+    | \infixl 7 * : A -> A -> A
+    | ide-left (x : A) : ide * x = x
+    | ide-right (x : A) : x * ide = x
+    | *-assoc (x y z : A) : (x * y) * z = x * (y * z)
+  }
+
+  \class CommMonoid \extends Monoid {
+    | comm (x y : A) : x * y = y * x
+    | ide-right x => comm x ide *> ide-left x
+  }
+
+  \class AbGroup \extends CommMonoid {
+    | inverse : A -> A
+    | inv-left (x : A) : inverse x * x = ide
+    | inv-right (x : A) : x * inverse x = ide
+  }
+
+  -- We omit distributivity
+
+  \class Ring \extends AbGroup
+    | mulMonoid : Monoid A
+
+  -- This is not a correct way to define the class Ring:
+  -- the structures of addition and multiplication coincide.
+
+  \class Ring' \extends AbGroup, Monoid
+
+  -- This class does not extend Monoid
+
+  \class AbGroup' (A : \Type) {
+    -- Here all the fields of Monoid, CommMonoid and AbGroup
+    -- should be repeated
+  }
+
+  \class Ring'' \extends AbGroup', Monoid
+    | Monoid.A => AbGroup'.A
+
+  -- make sure that classifying fields coincide
+}
+
+\module WithoutClassifying \where {
+  \func isInj {A B : \Type} (f : A -> B) : \Type => {?}
+
+  \func isSur {A B : \Type} (f : A -> B) : \Type => {?}
+
+  \func isBij {A B : \Type} (f : A -> B) : \Type => {?}
+
+  \func isInj+isSur=>isBij {A B : \Type} (f : A -> B) (p : isInj f) (q : isInj f) : isBij f => {?}
+
+  \func isBij=>isInj {A B : \Type} (f : A -> B) (p : isBij f) : isInj f => {?}
+
+  \func isBij=>isSur {A B : \Type} (f : A -> B) (p : isBij f) : isSur f => {?}
+
+  \class Map \noclassifying {A B : \Type} (f : A -> B) {
+    \func isInj : \Type => {?}
+
+    \func isSur : \Type => {?}
+
+    \func isBij : \Type => {?}
+
+    \func isInj+isSur=>isBij (p : isInj) (q : isInj) : isBij => {?}
+
+    \func isBij=>isInj (p : isBij) : isInj => {?}
+
+    \func isBij=>isSur (p : isBij) : isSur => {?}
+  }
+
+  \func isInj+isSur<=>isBij (m : Map) : \Sigma (isBij -> \Sigma isInj isSur) (\Sigma isInj isSur -> isBij) =>
+    ((\lam p => (isBij=>isInj p, isBij=>isInj p)), (\lam p => isInj+isSur=>isBij p.1 p.2))
+    \where \open Map
+
+  \func id-isInj {A : \Type} : Map.isInj {\new Map (\lam (a : A) => a)} => {?}
+
+  \class Endo \extends Map {
+    | B => A
+
+    \func isIdem => \Pi (x : A) -> f (f x) = f x
+
+    \func isInv => \Pi (x : A) -> f (f x) = x
+
+    \func isIdem+isInv=>id (p : isIdem) (q : isInv) : f = (\lam x => x) => {?}
+  }
+}
+
+\module Functor \where {
+  \class Functor (F : \Type -> \Type)
+    | fmap {A B : \Type} (f : A -> B) : F A -> F B
+    | fmap-id {A : \Type} (y : F A) : fmap (\lam (x : A) => x) y = y
+    | fmap-comp {A B C : \Type} (f : A -> B) (g : B -> C) (y : F A)
+    : fmap (\lam x => g (f x)) y = fmap g (fmap f y)
+
+  \module Exercise5 \where {
+    \open SymmetryTransitivityLeibniz (inv, pmap)
+    \open EquationalReasoning (==<, >==, qed)
+    \open FunctionalExtensionality (funExt)
+
+    \class Monad \extends Functor {
+      | return {A : \Type} (a : A) : F A
+      | \infixl 3 >>= {A B : \Type} (a : F A) (f : A -> F B) : F B
+      | left-id {A B : \Type} (a : A) (f : A -> F B) : return a >>= f = f a
+      | right-id {A : \Type} (m : F A) : m >>= return = m
+      | bind-assoc {A B C : \Type} (m : F A) (f : A -> F B) (g : B -> F C)
+      : (m >>= f) >>= g = m >>= (\lam a => f a >>= g)
+      | fmap => \lam f a => a >>= (\lam a => return (f a))
+      | fmap-id => right-id
+      | fmap-comp {A B C : \Type} (f : A -> B) (g : B -> C) (m : F A) =>
+        inv (
+          (m >>= (\lam a => return (f a))) >>= (\lam b => return (g b))
+            ==< bind-assoc m (\lam a => return (f a)) (\lam b => return (g b)) >==
+          m >>= (\lam a => (return (f a)) >>= (\lam b => return (g b)))
+            ==< pmap (>>= m) (funExt (\lam _ => F C) (\lam a => left-id (f a) (\lam b => return (g b)))) >==
+          m >>= (\lam a => return (g (f a)))
+            `qed
+        )
+    }
+
+    \data Maybe (A : \Type) | nothing | just A
+
+    \instance MaybeMonad : Monad Maybe {
+      | return => just
+      | >>= => \lam ma f => \case \elim ma \with {
+        | nothing => nothing
+        | just a => f a
+      }
+      | left-id => \lam a f => idp
+      | right-id => \lam ma => \case \elim ma \with {
+        | nothing => idp
+        | just a => idp
+      }
+      | bind-assoc => \lam ma f g => \case \elim ma \with {
+        | nothing => idp
+        | just a => idp
+      }
+    }
   }
 }
