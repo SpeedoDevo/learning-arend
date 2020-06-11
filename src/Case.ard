@@ -1,5 +1,7 @@
 \import Basics
 \import Proofs
+\import Equality
+\import ProofsOfEquality
 
 \module Filter \where {
   \open Data (Bool, true, false)
@@ -141,6 +143,103 @@
         \with {
           | true => proof p xs
           | false => <=-helper (proof p xs)
+        }
+  }
+}
+
+\module Elim \where {
+  \open Data (Bool, true, false)
+
+  \func \infixr 3 && (x y : Bool) : Bool \elim x
+    | true => y
+    | false => false
+
+  \func &&-assoc (x y z : Bool) : (x && y) && z = x && (y && z) => \case x \with {
+    | true => {?}
+    | false => {?}
+  }
+
+  \func &&-assoc' (x y z : Bool) : (x && y) && z = x && (y && z) =>
+    \case x \as x'
+    \return (x' && y) && z = x' && (y && z)
+    \with {
+      | true => idp
+      | false => idp
+    }
+
+  \func &&-assoc'' (x y z : Bool) : (x && y) && z = x && (y && z) => \case \elim x \with {
+    | true => idp
+    | false => idp
+  }
+}
+
+\module MAtchingIdp \where {
+  \open Data (Bool, true, false, not)
+  \open SymmetryTransitivityLeibniz (transport, inv)
+
+  \func baz {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A) (pt : B true) (pf : B false) : B (p a) =>
+    \case p a \as b, idp : b = p a \with {
+      | true, q => transport B q pt
+      | false, q => transport B q pf
+    }
+
+  \func baz' {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A) (pt : B true) (pf : B false) : B (p a) =>
+    helper B p a pt pf (p a) idp
+    \where
+      \func helper {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A) (pt : B true) (pf : B false)
+                   (b : Bool) (q : b = p a) : B (p a) \elim b
+        | true => transport B q pt
+        | false => transport B q pf
+
+  \func baz'' {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A) (pt : B true) (pf : B false) : B (p a) =>
+    \case p a \as b
+    \return B b
+    \with {
+      | true => pt
+      | false => pf
+    }
+
+  \func bar {A : \Type} (p q : A -> Bool) (a : A) (s : q a = not (p a))
+    : not (q a) = p a =>
+    \case p a \as x, q a \as y, s : y = not x
+    \return not y = x
+    \with {
+      | true, true, s' => inv s'
+      | true, false, _ => idp
+      | false, true, _ => idp
+      | false, false, s' => inv s'
+    }
+
+  \func bar' {A : \Type} (p q : A -> Bool) (a : A) (s : q a = not (p a))
+    : not (q a) = p a => helper (p a) (q a) s
+    \where
+      \func helper (x y : Bool) (s : y = not x) : not y = x \elim x, y
+        | true, true => inv s
+        | true, false => idp
+        | false, true => idp
+        | false, false => inv s
+
+  \module Exercise3 \where {
+    \open SymmetryTransitivityLeibniz (pmap, transport)
+    \open CommutativityOf+ (*>)
+
+    \func proof {f : Bool -> Bool} {x : Bool} : f (f (f x)) = f x \elim x
+      | true =>
+        \case f true \as ft, f false \as ff, idp : f true = ft, idp : f false = ff
+        \return f (f ft) = ft
+        \with {
+          | true, true, p, q => pmap f p *> p
+          | true, false, p, q => pmap f p *> p
+          | false, true, p, q => pmap f q *> p
+          | false, false, p, q => pmap f q *> q
+        }
+      | false =>
+        \case f true \as ft, f false \as ff, idp : f true = ft, idp : f false = ff
+        \return f (f ff) = ff \with {
+          | true, true, p, q => pmap f p *> p
+          | true, false, p, q => pmap f q *> q
+          | false, true, p, q => pmap f p *> q
+          | false, false, p, q => pmap f q *> q
         }
   }
 }
