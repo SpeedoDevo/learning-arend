@@ -1,4 +1,5 @@
 \import Basics
+\import Proofs
 
 \module Filter \where {
   \open Data (Bool, true, false)
@@ -54,5 +55,92 @@
             =
           (5 / 18 / 38 / 47 / 51 / 91 / 100 / nil) => idp
       }
+  }
+}
+
+\module Case \where {
+  \open Data (Bool, true, false)
+  \open Data.Exercise5 (<)
+
+  \func not (b : Bool) : Bool
+    | true => false
+    | false => true
+
+  \func foo {A : \Type} (p : A -> Bool) (a : A) : p a = not (not (p a)) =>
+    \case p a \as b \return b = not (not b) \with {
+      | true => idp
+      | false => idp
+    }
+
+  \func foo' {A : \Type} (p : A -> Bool) (a : A) : p a = not (not (p a)) =>
+    helper (p a)
+    \where
+      \func helper (b : Bool) : b = not (not b) \elim b
+        | true => idp
+        | false => idp
+
+  \data Ordering | LT | EQ | GT
+
+  \func compare (x y : Nat) : Ordering =>
+    \case x < y, y < x \with {
+      | true, true => EQ -- this will never be matched
+      | true, false => LT
+      | false, true => GT
+      | false, false => EQ
+    }
+}
+
+\module FilterProof \where {
+  \open Data (Unit, unit, Empty, Bool, true, false)
+  \open Data.Exercise2 (if)
+  \open Lists (List, cons, nil, /)
+  \open CurryHoward (absurd)
+  \open Filter
+
+  \func \infix 4 <= (x y : Nat) : \Type
+    | 0, _ => Unit
+    | suc _, 0 => Empty
+    | suc x, suc y => x <= y
+
+  \func length {A : \Type} (xs : List A) : Nat
+    | nil => 0
+    | cons _ xs => suc (length xs)
+
+  \func <=-helper {x y : Nat} (p : x <= y) : x <= suc y \elim x, y
+    | 0, _ => unit
+    | suc x, 0 => absurd p
+    | suc x, suc y => <=-helper p
+
+  \func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter p xs) <= length xs \elim xs
+    | nil => unit
+    | cons x xs =>
+      \case p x \as b
+      \return length (
+        \case b
+        \with {
+          | true => x / (filter p xs)
+          | false => filter p xs
+        }) <= suc (length xs)
+      \with {
+        | true => filter-lem p xs
+        | false => <=-helper (filter-lem p xs)
+      }
+
+  \module Exercise2 \where {
+    \func filter {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+      | nil => nil
+      | cons x xs => \let r => filter p xs \in if (p x) (x / r) r
+
+    \func proof {A : \Type} (p : A -> Bool) (xs : List A) : length (filter p xs) <= length xs \elim xs
+      | nil => unit
+      | cons a xs =>
+        \case p a \as b
+        \return length (
+          \let r => filter p xs
+          \in if b (a / r) r) <= suc (length xs)
+        \with {
+          | true => proof p xs
+          | false => <=-helper (proof p xs)
+        }
   }
 }
