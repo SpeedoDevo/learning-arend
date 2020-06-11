@@ -1,0 +1,58 @@
+\import Basics
+
+\module Filter \where {
+  \open Data (Bool, true, false)
+  \open Lists (List, cons, nil, /)
+
+  \func filter {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+    | nil => nil
+    | cons x xs => \case p x \with {
+      | true => x / filter p xs
+      | false => filter p xs
+    }
+
+  \func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+    | nil => nil
+    | cons x xs => helper (p x) x (filter p xs)
+    \where
+      \func helper {A : \Type} (b : Bool) (x : A) (r : List A) : List A \elim b
+        | true => x / r
+        | false => r
+
+  \module Exercise1 \where {
+    \open Lists (++)
+
+    \func qsort (xs : List Nat) : List Nat => sort xs xs
+      \where {
+        \func sort (xs c : List Nat) : List Nat
+          | nil, _ => nil
+          | _, nil => nil
+          | cons x xs, cons c cs =>
+            \let (leq, gt) => partition x xs
+            \in (sort leq cs) ++ (x / (sort gt cs))
+
+        \func \infix 4 <= (n m : Nat) : Bool
+          | 0, 0 => true
+          | 0, suc m => true
+          | suc n, 0 => false
+          | suc n, suc m => n <= m
+
+        \func partition (pivot : Nat) (xs : List Nat) : \Sigma (leq gt : List Nat) \elim xs
+          | nil => (nil, nil)
+          | cons a xs =>
+            \let (leq, gt) => partition pivot xs
+            \in \case a <= pivot
+            \with {
+              | true => (a / leq, gt)
+              | false => (leq, a / gt)
+            }
+
+        \func test-partition : partition 2 (1 / 2 / 3 / 4 / nil) = (1 / 2 / nil, 3 / 4 / nil) => idp
+
+        \func test-qsort :
+          qsort (91 / 47 / 51 / 18 / 38 / 5 / 100 / nil)
+            =
+          (5 / 18 / 38 / 47 / 51 / 91 / 100 / nil) => idp
+      }
+  }
+}
