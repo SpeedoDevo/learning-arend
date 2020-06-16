@@ -429,3 +429,92 @@
           }
   }
 }
+
+\module DecidableEquality \where {
+  \open DecidablePredicates
+  \open Data (Bool, true, false)
+  \open SymmetryTransitivityLeibniz (inv, pmap)
+
+  \func DecEq (A : \Type) => \Pi (a a' : A) -> Decide (a = a')
+
+  \class Eq (A : \Type) {
+    | decideEq : DecEq A
+
+    \func \infix 4 == (a a' : A) : Bool => \case decideEq a a' \with {
+      | yes _ => true
+      | no _ => false
+    }
+  } \where {
+    \func \infix 4 ==' {e : Eq} (a a' : e.A) : Bool => \case e.decideEq a a' \with {
+      | yes _ => true
+      | no _ => false
+    }
+  }
+
+  \open Eq
+
+  \func pred (n : Nat) : Nat
+    | 0 => 0
+    | suc n => n
+
+  \instance NatEq : Eq Nat
+    | decideEq => decideEq
+    \where
+      \func decideEq (x y : Nat) : Decide (x = y)
+        | 0, 0 => yes idp
+        | 0, suc y => no (\lam p => suc/=0 (inv p))
+        | suc x, 0 => no suc/=0
+        | suc x, suc y => \case decideEq x y \with {
+          | yes p => yes (pmap suc p)
+          | no c => no (\lam p => c (pmap pred p))
+        }
+
+  \func test-NatEq : (0 == 0) = true => idp
+
+  \func test-NatEq' : (0 == 1) = false => idp
+
+  \module Exercise6 \where {
+    \open Lists (List, cons, nil, /)
+    \open SymmetryTransitivityLeibniz (transport)
+    \open SymmetryTransitivityLeibniz.Exercise1 (pmap2)
+    \open Data (Empty, Unit, unit)
+
+    \instance ListEq {e : Eq} : Eq (List e.A)
+      | decideEq => decideEq
+      \where {
+        \func decideEq {e : Eq} (xs ys : List e.A) : Decide (xs = ys) \elim xs, ys
+          | nil, nil => yes idp
+          | nil, cons a ys => no nil/=cons
+          | cons a xs, nil => no (\lam x => nil/=cons (inv x))
+          | cons x xs, cons y ys => \case decideEq xs ys \with {
+            | yes xs=ys => \case e.decideEq x y \with {
+              | yes x=y => yes (pmap2 cons x=y xs=ys)
+              | no nx=y => no (\lam x => nx=y (head x))
+            }
+            | no nxs=ys => no (\lam x => nxs=ys (tail x))
+          }
+
+        \func nil/=cons {A : \Type} {x : A} {xs : List A} (p : nil = cons x xs) : Empty =>
+          transport (\lam n => \case n \with {
+            | nil => Unit
+            | cons _ _ => Empty
+          }) p unit
+
+        \func head {A : \Type} {x y : A} {xs ys : List A} (p : cons x xs = cons y ys) : x = y =>
+          pmap (\lam xs => \case xs \with {
+            | nil => x
+            | cons a l => a
+          }) p
+
+        \func tail {A : \Type} {x y : A} {xs ys : List A} (p : cons x xs = cons y ys) : xs = ys =>
+          pmap (\lam l => \case l \with {
+            | nil => nil
+            | cons a l => l
+          }) p
+      }
+
+    \func test-ListEq : (1 / 2 / 3 / nil == 1 / 2 / 3 / nil) = true => idp
+
+    \func test-ListEq' : (nil == 1 / 2 / 3 / nil) = false => idp
+  }
+}
