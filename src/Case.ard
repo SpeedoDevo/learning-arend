@@ -1,6 +1,7 @@
 \import Basics
-\import Proofs
 \import Equality
+\import Indexed
+\import Proofs
 \import ProofsOfEquality
 
 \module Filter \where {
@@ -154,10 +155,10 @@
     | true => y
     | false => false
 
-  \func &&-assoc (x y z : Bool) : (x && y) && z = x && (y && z) => \case x \with {
-    | true => {?}
-    | false => {?}
-  }
+  --  \func &&-assoc (x y z : Bool) : (x && y) && z = x && (y && z) => \case x \with {
+  --    | true => {?}
+  --    | false => {?}
+  --  }
 
   \func &&-assoc' (x y z : Bool) : (x && y) && z = x && (y && z) =>
     \case x \as x'
@@ -220,7 +221,7 @@
         | false, false => inv s
 
   \module Exercise3 \where {
-    \open SymmetryTransitivityLeibniz (pmap, transport)
+    \open SymmetryTransitivityLeibniz (pmap)
     \open CommutativityOf+ (*>)
 
     \func proof {f : Bool -> Bool} {x : Bool} : f (f (f x)) = f x \elim x
@@ -241,5 +242,144 @@
           | false, true, p, q => pmap f p *> q
           | false, false, p, q => pmap f q *> q
         }
+  }
+}
+
+\module Views \where {
+  \open Nat (*, +)
+  \open SymmetryTransitivityLeibniz (pmap)
+
+  \data Parity (n : Nat)
+    | even (k : Nat) (p : n = 2 * k)
+    | odd (k : Nat) (p : n = 2 * k + 1)
+
+  \func parity (n : Nat) : Parity n
+    | 0 => even 0 idp
+    | suc n => \case parity n \with {
+      | even k p => odd k (pmap suc p)
+      | odd k p => even (suc k) (pmap suc p)
+    }
+
+  \func div2 (n : Nat) : Nat => \case parity n \with {
+    | even k _ => k
+    | odd k _ => k
+  }
+
+  \module Exercise4 \where {
+    \open SymmetryTransitivityLeibniz (inv)
+    \open CommutativityOf+ (*>, +-comm)
+    \open EquationalReasoning (==<, >==, qed)
+
+    \data \infix 4 < (m n : Nat) \with
+      | 0, suc n => z<s
+      | suc m, suc n => s<s (m < n)
+
+    \data QR (n m : Nat)
+      | qr (q r : Nat) (t : r < m) (p : n = q * m + r)
+
+    \data Compare (m n : Nat)
+      | lt (l : m < n)
+      | eq (e : m = n)
+      | gt (g : n < m)
+
+    \func compare (m n : Nat) : Compare m n
+      | 0, 0 => eq idp
+      | 0, suc n => lt z<s
+      | suc m, 0 => gt z<s
+      | suc m, suc n => \case compare m n \with {
+        | lt l => lt (s<s l)
+        | eq e => eq (pmap suc e)
+        | gt g => gt (s<s g)
+      }
+
+    \func <absurd {m n : Nat} (p : m < n) (q : n < suc m) {A : \Type} : A \elim m, n, p, q
+      | 0, suc n, z<s, s<s ()
+      | suc m, suc n, s<s p, s<s q => <absurd p q
+
+    \func _0*n {n : Nat} : 0 = 0 * n \elim n
+      | 0 => idp
+      | suc n => _0*n
+
+    \func _1*n {n : Nat} : n = 1 * n \elim n
+      | 0 => idp
+      | suc n => pmap suc _1*n
+
+    \func toQR (n m : Nat) (nz : 0 < m) : QR n m \elim n
+      | 0 => qr 0 0 nz _0*n
+      | suc n =>
+        \case toQR n m nz \with {
+          | qr q r t p' =>
+            \case compare (suc r) m \with {
+              | lt l => qr q (suc r) l (pmap suc p')
+              | eq e => qr (suc q) 0 nz (eq-case e p')
+              | gt g => <absurd t g
+            }
+        }
+      \where {
+        \open AssociativityOfAppend.Exercise2 (z+-is-id)
+
+        \func eq-case {n m q r : Nat} (e : suc r = m) (p : n = q * m + r) : suc n = suc q * m =>
+          suc n
+            ==< pmap suc p >==
+          suc (q * m + r)
+            ==< idp >==
+          q * m + suc r
+            ==< pmap (\lam x => q * m + x) e >==
+          q * m + m
+            ==< suc-* >==
+          suc q * m
+            `qed
+
+        \func suc-* {m n : Nat} : m * n + n = suc m * n \elim m, n
+          | 0, 0 => idp
+          | 0, suc n => pmap suc (
+            0 * n + n
+              ==< pmap (\lam z => z + n) (inv _0*n) >==
+            0 + n
+              ==< z+-is-id >==
+            n
+              ==< _1*n >==
+            1 * n
+              `qed
+          )
+          | suc m, 0 => idp
+          | suc m, suc n => pmap suc (
+            suc (suc m * n + m) + n
+              ==< suc-+ >==
+            suc (suc m * n + m + n)
+              ==< pmap (\lam x => suc x) (+-assoc (suc m * n) m n) >==
+            suc (suc m * n + (m + n))
+              ==< pmap (\lam x => suc (suc m * n + x)) (+-comm m n) >==
+            suc (suc m * n + (n + m))
+              ==< pmap (\lam x => suc x) (inv (+-assoc (suc m * n) n m)) >==
+            suc (suc m * n + n + m)
+              ==< pmap (\lam x => suc (x + m)) suc-* >==
+            suc (suc (suc m) * n + m)
+              `qed
+          )
+          \where {
+            \open Sort (+-assoc)
+          }
+
+        \func suc-+ {m n : Nat} : suc m + n = suc (m + n) \elim m, n
+          | 0, 0 => idp
+          | 0, suc n => pmap suc (+-comm 1 n *> pmap suc (inv z+-is-id))
+          | suc m, 0 => idp
+          | suc m, suc n => pmap suc suc-+
+      }
+
+    \func div (m n : Nat) : Nat => \case compare 0 n \with {
+      | lt l => \case toQR m n l \with {
+        | qr q r t p => q
+      }
+      | eq e => 0
+      | gt ()
+    }
+
+    \func test-div : 9 `div` 3 = 3 => idp
+
+    \func test-div' : 3 `div` 9 = 0 => idp
+
+    \func test-div'' : (8 `div` 2) `div` 2 = 2 => idp
   }
 }
