@@ -383,3 +383,49 @@
     \func test-div'' : (8 `div` 2) `div` 2 = 2 => idp
   }
 }
+
+\module DecidablePredicates \where {
+  \open Data (Empty, Unit, unit)
+  \open SymmetryTransitivityLeibniz (transport)
+
+  \data Decide (A : \Type)
+    | yes A
+    | no (A -> Empty)
+
+  \func DecPred {A : \Type} (P : A -> \Type) => \Pi (a : A) -> Decide (P a)
+
+  \func suc/=0 {n : Nat} (p : suc n = 0) : Empty =>
+    transport (\lam n => \case n \with {
+      | 0 => Empty
+      | suc _ => Unit
+    }) p unit
+
+  -- the predicate \lam n => n = 0 is decidable
+
+  \func decide0 : DecPred (\lam (n : Nat) => n = 0) =>
+    \lam n =>
+        \case n \as n'
+        \return Decide (n' = 0)
+        \with {
+          | 0 => yes idp
+          | suc _ => no suc/=0
+        }
+
+  \module Exercise5 \where {
+    \open Data (Bool, true, false, not)
+    \open Propositions (T)
+
+    \func isEven (n : Nat) : Bool
+      | 0 => true
+      | suc n => not (isEven n)
+
+    \func proof : DecPred (\lam n => T (isEven n)) =>
+      \lam n =>
+          \case isEven n \as e
+          \return Decide (T e)
+          \with {
+            | true => yes unit
+            | false => no (\lam x => x)
+          }
+  }
+}
