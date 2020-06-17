@@ -517,4 +517,31 @@
 
     \func test-ListEq' : (nil == 1 / 2 / 3 / nil) = false => idp
   }
+
+  \module Exercise7 \where {
+    \open Lists (List, cons, nil, /)
+    \open Data (Empty, Unit, unit)
+    \open SymmetryTransitivityLeibniz.Exercise1 (pmap2)
+    \open CommutativityOf+ (*>)
+
+    \func repeat {A : \Type} (n : Nat) (a : A) : List A \elim n
+      | 0 => nil
+      | suc n => cons a (repeat n a)
+
+    \data Result (A : \Type) (xs : List A)
+      | empty (xs = nil)
+      | repeated (n : Nat) (a : A) (p : xs = repeat n a)
+      | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
+
+    \func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs \elim xs
+      | nil => empty idp
+      | cons a xs => \case lemma xs {dec} \with {
+        | empty p => repeated 1 a (pmap2 cons idp p)
+        | repeated n a' p => \case dec a a' \with {
+          | yes eq => repeated (suc n) a' (pmap2 cons eq p)
+          | no neq => A-is-not-trivial a a' neq
+        }
+        | A-is-not-trivial a a' neq => A-is-not-trivial a a' neq
+      }
+  }
 }
