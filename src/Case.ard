@@ -3,6 +3,7 @@
 \import Indexed
 \import Proofs
 \import ProofsOfEquality
+\import Records
 
 \module Filter \where {
   \open Data (Bool, true, false)
@@ -543,5 +544,92 @@
         }
         | A-is-not-trivial a a' neq => A-is-not-trivial a a' neq
       }
+  }
+}
+
+\module Decidable->Bool \where {
+  \open DecidablePredicates
+  \open Data (Bool, true, false, Unit, unit)
+  \open DependentRecords (T, tt)
+
+  \func FromBoolToDec {A : \Type} (p : A -> Bool) : \Sigma (P : A -> \Type) (DecPred P) =>
+    ( \lam a => T (p a)
+    , \lam a =>
+          \case p a \as b
+          \return Decide (T b)
+          \with {
+            | true => yes tt
+            | false => no
+                (\lam t => \case t \with {
+                })
+          }
+    )
+
+  \func FromDecToBool {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) : A -> Bool =>
+    \lam a => \case P.2 a \with {
+      | yes _ => true
+      | no _ => false
+    }
+
+  \module Exercise8 \where {
+    \open FunctionalExtensionality (funExt)
+    \open Data (Empty)
+
+    \func proof {A : \Type} (ab : A -> Bool) : ab = FromDecToBool (FromBoolToDec ab) =>
+      funExt
+          (\lam _ => Bool)
+          (
+            \lam a =>
+                \case ab a \as b
+                \return (
+                  b
+                    =
+                  (
+                    \case
+                      \case b \as b
+                      \return Decide (T b)
+                      \with {
+                        | true => yes tt
+                        | false => no (\lam t => (\case t \with {
+                        }))
+                      }
+                    \return Bool
+                    \with {
+                      | yes _ => true
+                      | no _ => false
+                    }
+                  )
+                )
+                \with {
+                  | true => idp
+                  | false => idp
+                }
+          )
+
+    \func \infix 4 <-> {A : \Type} (P Q : A -> \Type) => \Pi (x : A) -> \Sigma (P x -> Q x) (Q x -> P x)
+
+    \func proof' {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) : (FromBoolToDec (FromDecToBool P)).1 <-> P.1 \elim P
+      | (P, d) =>
+        \lam a =>
+            \let B => \lam (da : Decide (P a)) =>
+                \case da
+                \return Bool
+                \with {
+                  | yes _ => true
+                  | no _ => false
+                }
+            \in \case d a \as da
+            \return \Sigma (T (B da) -> P a) (P a -> T (B da))
+            \with {
+              | yes y => (\lam x => y, \lam x => tt)
+              | no n =>
+                ( \lam x =>
+                      \case x \with {
+                      }
+                , \lam x =>
+                      \case n x \with {
+                      }
+                )
+            }
   }
 }

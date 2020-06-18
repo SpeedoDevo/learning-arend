@@ -105,7 +105,7 @@
 }
 
 \module DependentRecords \where {
-  \data Bool | true | false
+  \open Data (Bool, true, false)
 
   \data T (b : Bool) \with
     | true => tt
