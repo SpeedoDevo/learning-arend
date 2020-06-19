@@ -1,0 +1,66 @@
+\module Hierarchies \where {
+  \func tt : \Type2 => \Type0 -> \Type1
+
+  \func id (A : \Type) (a : A) => a
+
+  \func id' (A : \Type \lp) (a : A) => a
+
+  \func type : \Type => \Type
+
+  \func type' : \Type (\suc \lp) => \Type \lp
+
+  \func test0 : \Type (\max (\suc (\suc \lp)) 4) => \Type (\max \lp 3) -> \Type (\suc \lp)
+
+  \func test1 => id Nat 0
+
+  \func test2 => id \Type0 Nat
+
+  \func test3 => id (\Type0 -> \Type1) (\lam X => X)
+
+  \func test4 => id _ id
+
+  \func test4' => id (\Pi (A : \Type) -> A -> A) id
+
+  \func test5 => id (\suc \lp) (\Type \lp) Nat
+
+  \func test5' => id (\level (\suc \lp) _) (\Type \lp) Nat
+
+  \func test6 => id (\level 2 _) \Type1 \Type0
+
+  \data Magma (A : \Type)
+    | con (A -> A -> A)
+
+  \data MagmaEx (A : \Type) (B : \Type5)
+    | con' (A -> A -> A)
+
+  \func test7 : \Type \lp => MagmaEx \lp Nat \Type4
+
+  \class Magma' (A : \Type)
+    | \infixl 6 ** : A -> A -> A
+
+  \func test8 : \Type (\suc \lp) => Magma' \lp
+
+  \func test9 : \Type \lp => Magma \lp Nat
+
+  \class Functor (F : \Type -> \Type)
+    | fmap {A B : \Type} : (A -> B) -> F A -> F B
+
+  \data Maybe (A : \Type) | nothing | just A
+
+  \func test10 : \Type (\suc \lp) => Functor \lp Maybe
+
+  \module Exercise1 \where {
+    \func id'' {A : \Type} (a : A) => a
+
+    \func idTest1 => id'' (\suc \lp) (id'' (\suc \lp) id)
+
+    \func idTest2 => id'' (\suc \lp) Maybe
+
+    \func idTest3 => id'' (\level 2 _) Functor
+
+    \func idTest4 => id'' (\level 2 _) (Functor Maybe)
+
+    \func idTest5 : \Pi (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) -> \Prop =>
+      \lam f => id'' (\suc \lp) (Functor Maybe f)
+  }
+}
