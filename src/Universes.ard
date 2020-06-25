@@ -1,3 +1,6 @@
+\import Case
+\import Equality
+
 \module Hierarchies \where {
   \func tt : \Type2 => \Type0 -> \Type1
 
@@ -63,4 +66,38 @@
     \func idTest5 : \Pi (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) -> \Prop =>
       \lam f => id'' (\suc \lp) (Functor Maybe f)
   }
+}
+
+\module Induction \where {
+  \open Views.Exercise4 (<, z<s, s<s, compare, lt, eq, gt, <absurd)
+  \open SymmetryTransitivityLeibniz (transport, inv)
+
+  \func <0 {n : Nat} (p : n < 0) {A : \Type} : A
+
+  \func Nat-ind (E : Nat -> \Type)
+                (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> k < n -> E k) -> E n)
+                (n : Nat) : E n => Ek E r (suc n) n n<suc_n
+    \where {
+      \func Ek (E : Nat -> \Type)
+               (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> k < n -> E k) -> E n)
+               (n k : Nat)
+               (l : k < n) : E k \elim n, k, l
+        | 0, 0, ()
+        | suc n, 0, z<s => r 0 (\lam k lt => <0 lt)
+        | suc n, suc k, s<s l => r (suc k) (\lam m p => Ek E r n m (m<k<n p l))
+
+      \func m<k<n {m k n : Nat} (p : m < suc k) (q : k < n) : m < n \elim m, k, n, p, q
+        | 0, 0, 0, z<s, ()
+        | 0, 0, suc n, z<s, z<s => z<s
+        | 0, suc k, 0, z<s, ()
+        | 0, suc k, suc n, z<s, s<s q => z<s
+        | suc m, 0, 0, s<s p, ()
+        | suc m, 0, suc n, s<s (), _
+        | suc m, suc k, 0, s<s p, ()
+        | suc m, suc k, suc n, s<s p, s<s q => s<s (m<k<n p q)
+
+      \func n<suc_n {n : Nat} : n < suc n \elim n
+        | 0 => z<s
+        | suc n => s<s n<suc_n
+    }
 }
