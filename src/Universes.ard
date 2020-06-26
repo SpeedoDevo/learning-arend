@@ -1,5 +1,7 @@
 \import Case
 \import Equality
+\import ProofsOfEquality
+\import Basics
 
 \module Hierarchies \where {
   \func tt : \Type2 => \Type0 -> \Type1
@@ -74,6 +76,10 @@
 
   \func <0 {n : Nat} (p : n < 0) {A : \Type} : A
 
+  \func n<suc_n {n : Nat} : n < suc n \elim n
+    | 0 => z<s
+    | suc n => s<s n<suc_n
+
   \func Nat-ind (E : Nat -> \Type)
                 (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> k < n -> E k) -> E n)
                 (n : Nat) : E n => Ek E r (suc n) n n<suc_n
@@ -95,9 +101,54 @@
         | suc m, 0, suc n, s<s (), _
         | suc m, suc k, 0, s<s p, ()
         | suc m, suc k, suc n, s<s p, s<s q => s<s (m<k<n p q)
-
-      \func n<suc_n {n : Nat} : n < suc n \elim n
-        | 0 => z<s
-        | suc n => s<s n<suc_n
     }
+
+  \module Exercise2 \where {
+    \func div (m n : Nat) (p : 0 < n) : Nat =>
+      Nat-ind (\lam _ => Nat) (
+        \lam m r =>
+            \case compare m n \with {
+              | lt l => 0
+              | eq e => 1
+              | gt g => suc (r (sub m n g) (sub_n<n m n g p))
+            }
+      ) m
+      \where {
+        \func sub (m n : Nat) (p : n < m) : Nat
+          | 0, 0, ()
+          | suc m, 0, z<s => suc m
+          | suc m, suc n, s<s p => sub m n p
+
+        \func test-sub : sub 5 3 (s<s (s<s (s<s z<s))) = 2 => idp
+
+        \func test-sub' : sub 8 3 (s<s (s<s (s<s z<s))) = 5 => idp
+
+        \func sub_n<n (m n : Nat) (p : n < m) (nz : 0 < n) : sub m n p < m
+          | 0, 0, nz, ()
+          | suc m, 0, z<s, ()
+          | suc m, suc n, s<s p, z<s =>
+            \case compare 0 n \with {
+              | lt l => m<n->m<suc_n (sub_n<n m n p l)
+              | eq e => transport (\lam k => k < suc m) (m=sub_m_0 e p) n<suc_n
+              | gt ()
+            }
+
+        \func m=sub_m_0 {m n : Nat} (z : 0 = n) (n<m : n < m) : m = sub m n n<m \elim m, n, z, n<m
+          | 0, 0, z, ()
+          | 0, suc n, z, ()
+          | suc m, 0, z, z<s => idp
+          | suc m, suc n, z, s<s n<m => suc-n/=0 (inv z)
+          \where \open Predicates.Exercise3 (suc-n/=0)
+
+        \func m<n->m<suc_n {m n : Nat} (p : m < n) : m < suc n \elim m, n, p
+          | 0, suc n, z<s => z<s
+          | suc m, suc n, s<s p => s<s (m<n->m<suc_n p)
+      }
+
+    \func test-div : div 9 3 z<s = 3 => idp
+
+    \func test-div' : div 3 9 z<s = 0 => idp
+
+    \func test-div'' : div 144 12 z<s = 12 => idp
+  }
 }
