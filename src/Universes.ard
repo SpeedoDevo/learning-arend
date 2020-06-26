@@ -80,6 +80,16 @@
     | 0 => z<s
     | suc n => s<s n<suc_n
 
+  \func m<k<n {m k n : Nat} (p : m < suc k) (q : k < n) : m < n \elim m, k, n, p, q
+    | 0, 0, 0, z<s, ()
+    | 0, 0, suc n, z<s, z<s => z<s
+    | 0, suc k, 0, z<s, ()
+    | 0, suc k, suc n, z<s, s<s q => z<s
+    | suc m, 0, 0, s<s p, ()
+    | suc m, 0, suc n, s<s (), _
+    | suc m, suc k, 0, s<s p, ()
+    | suc m, suc k, suc n, s<s p, s<s q => s<s (m<k<n p q)
+
   \func Nat-ind (E : Nat -> \Type)
                 (r : \Pi (n : Nat) -> (\Pi (k : Nat) -> k < n -> E k) -> E n)
                 (n : Nat) : E n => Ek E r (suc n) n n<suc_n
@@ -91,16 +101,6 @@
         | 0, 0, ()
         | suc n, 0, z<s => r 0 (\lam k lt => <0 lt)
         | suc n, suc k, s<s l => r (suc k) (\lam m p => Ek E r n m (m<k<n p l))
-
-      \func m<k<n {m k n : Nat} (p : m < suc k) (q : k < n) : m < n \elim m, k, n, p, q
-        | 0, 0, 0, z<s, ()
-        | 0, 0, suc n, z<s, z<s => z<s
-        | 0, suc k, 0, z<s, ()
-        | 0, suc k, suc n, z<s, s<s q => z<s
-        | suc m, 0, 0, s<s p, ()
-        | suc m, 0, suc n, s<s (), _
-        | suc m, suc k, 0, s<s p, ()
-        | suc m, suc k, suc n, s<s p, s<s q => s<s (m<k<n p q)
     }
 
   \module Exercise2 \where {
@@ -150,5 +150,25 @@
     \func test-div' : div 3 9 z<s = 0 => idp
 
     \func test-div'' : div 144 12 z<s = 12 => idp
+  }
+
+  \module Exercise3 \where {
+    \open Lists (List, cons, nil, /)
+    \open FilterProof (length)
+
+    \func List-ind {A : \Type} (E : List A -> \Type)
+                   (r : \Pi (xs : List A) -> (\Pi (ys : List A) -> length ys < length xs -> E ys) -> E xs)
+                   (xs : List A) : E xs \elim xs
+      | nil => r nil (\lam zs p => <0 p)
+      | cons x xs => Eys E r (x / x / xs) (x / xs) (n<suc_n)
+      \where {
+        \func Eys {A : \Type} (E : List A -> \Type)
+                  (r : \Pi (xs : List A) -> (\Pi (ys : List A) -> length ys < length xs -> E ys) -> E xs)
+                  (xs ys : List A)
+                  (l : length ys < length xs) : E ys \elim xs, ys, l
+          | nil, nil, ()
+          | cons x xs, nil, z<s => r nil (\lam zs p => <0 p)
+          | cons x xs, cons y ys, s<s l => r (cons y ys) (\lam zs p => Eys E r xs zs (m<k<n p l))
+      }
   }
 }
