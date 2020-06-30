@@ -1,5 +1,6 @@
 \import Case
 \import Equality
+\import Proofs
 \import ProofsOfEquality
 \import Basics
 
@@ -170,5 +171,127 @@
           | cons x xs, nil, z<s => r nil (\lam zs p => <0 p)
           | cons x xs, cons y ys, s<s l => r (cons y ys) (\lam zs p => Eys E r xs zs (m<k<n p l))
       }
+  }
+}
+
+\module InductionRecursion \where {
+  \open Data (Bool, true, false)
+  \open Lists (List)
+
+  \func isEven (n : Nat) : Bool
+    | 0 => true
+    | suc n => isOdd n
+
+  \func isOdd (n : Nat) : Bool
+    | 0 => false
+    | suc n => isEven n
+
+  \data IsEven (n : Nat) : \Type \with
+    | 0 => zero-isEven
+    | suc n => suc-isEven (IsOdd n)
+
+  \data IsOdd (n : Nat) : \Type \with
+    | suc n => suc-isOdd (IsEven n)
+
+  \data Type
+    | nat
+    | list Type
+    | arr Type Type
+
+  --  \func El (t : Type) : \Type0 \elim t
+  --    | nat => Nat
+  --    | list t => List (El t)
+  --    | arr t1 t2 => El t1 -> El t2
+
+  --  \func idc (t : Type) (x : El t) : El t => x
+
+  --  \data Type' : \Set0
+  --    | nat'
+  --    | list' Type'
+  --    | pi' (a : Type') (El' a -> Type')
+
+  --  \func El' (t : Type') : \Type0 \elim t
+  --    | nat' => Nat
+  --    | list' t => List (El' t)
+  --    | pi' t1 t2 => \Pi (a : El' t1) -> El' (t2 a)
+}
+
+\module Completeness \where {
+  \open Data (Empty)
+  \open Nat (*)
+  \open Lists (List)
+
+  -- P1 is correct specification for 'fac', but incomplete.
+
+  \func P1 (f : Nat -> Nat) => f 3 = 6
+
+  -- P2 is complete, but not correct.
+
+  \func P2 (f : Nat -> Nat) => Empty
+
+  -- P3 -- correct and complete specification for 'fac'.
+
+  \func P3 (f : Nat -> Nat) => \Sigma (f 0 = 1) (\Pi (n : Nat) -> f (suc n) = suc n * f n)
+
+  \func isSorted {A : \Type} (x : List A) : \Type => Empty
+
+  \func isPerm {A : \Type} (x y : List A) : \Type => Empty
+
+  \func P {A : \Type} (f : List A -> List A) => \Pi (xs : List A) -> \Sigma (isSorted (f xs)) (isPerm (f xs) xs)
+
+  -- where 'isSorted xs' is true iff  'xs' is sorted and
+  -- 'isPerm xs ys' is true iff 'xs' is a permutation of 'ys'.
+
+  -- One useful necessary and sufficient condition of completeness for correct specifications can be formulated as follows:
+  -- \Pi (x y : A) -> P x -> P y -> x = y
+
+  \module Exercise4 \where {
+    \open Lists (List, cons, nil, /)
+    \open Data (Bool, true, false, unit)
+    \open Propositions (T)
+    \open SymmetryTransitivityLeibniz (transport, inv)
+    \open Predicates.Exercise4 (In)
+    \open Predicates.Exercise7 (<=, nil<=_, here, there)
+    \open Predicates.Exercise8 \using (filter, proof \as proof-a)
+
+    \func proof-b {A : \Type} (fn : A -> Bool) (xs : List A) (x : A) (in : x `In` filter fn xs) : T (fn x) \elim xs, in
+      | cons x' xs, in =>
+        \case fn x' \as b, idp : b = fn x', in : x `In` filter-cons b x' (filter fn xs)
+        \with {
+          | true, e, In.here p =>
+            \let t => transport (\lam t => T t) e unit
+            \in transport (\lam b => T (fn b)) (inv p) t
+          | true, e, In.there i => proof-b fn xs x i
+          | false, e, i => proof-b fn xs x i
+        }
+      \where \open filter
+
+    \func proof-c {A : \Type} (fn : A -> Bool) (xs ys : List A) (p : ys <= xs)
+                  (q : \Pi (y : A) (y `In` ys) -> T (fn y)) : ys <= filter fn xs \elim xs, ys, p
+      | _, nil, _ => nil<=_
+      | cons x xs, cons y ys, here y=x ys<=xs =>
+        \let t => transport (\lam a => T (fn a)) y=x (q y (In.here idp))
+        \in \case fn x \as b, t : T b
+        \return cons y ys <= filter-cons b x (filter fn xs)
+        \with {
+          | true, unit => here y=x (proof-c fn xs ys ys<=xs (\lam y' in => q y' (In.there in)))
+        }
+      | cons x xs, cons y ys, there p =>
+        \case fn x \as b
+        \return cons y ys <= filter-cons b x (filter fn xs)
+        \with {
+          | true => there (proof-c fn xs (y / ys) p q)
+          | false => proof-c fn xs (y / ys) p q
+        }
+      \where \open filter
+
+    \func proof {A : \Type} (fn : A -> Bool) (xs : List A) : \Sigma
+      (filter fn xs <= xs)
+      (\Pi (x : A) (in : x `In` filter fn xs) -> T (fn x))
+      (\Pi (ys : List A) (p : ys <= xs) (q : \Pi (y : A) (y `In` ys) -> T (fn y)) -> ys <= filter fn xs) =>
+      ( proof-a fn xs
+      , proof-b fn xs
+      , proof-c fn xs
+      )
   }
 }
