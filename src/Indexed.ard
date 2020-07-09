@@ -1,12 +1,12 @@
 \import Basics (Data, Lists)
-\import Paths (pmap)
 \import Proofs (Propositions)
-\import Logic (Not)
+\import Equality
 
 \module Sort \where {
   \open Data (Bool, true, false)
   \open Lists (List, nil, cons)
   \open Nat (+)
+  \open SymmetryTransitivityLeibniz (pmap)
 
   \func if {A : \Type} (b : Bool) (t e : A) : A \elim b
     | true => t

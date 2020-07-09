@@ -29,9 +29,9 @@
 
   \func test5 => id (\suc \lp) (\Type \lp) Nat
 
-  \func test5' => id (\level (\suc \lp) _) (\Type \lp) Nat
+  \func test5' => id (\levels (\suc \lp) _) (\Type \lp) Nat
 
-  \func test6 => id (\level 2 _) \Type1 \Type0
+  \func test6 => id (\levels 2 _) \Type1 \Type0
 
   \data Magma (A : \Type)
     | con (A -> A -> A)
@@ -62,9 +62,9 @@
 
     \func idTest2 => id'' (\suc \lp) Maybe
 
-    \func idTest3 => id'' (\level 2 _) Functor
+    \func idTest3 => id'' (\levels 2 _) Functor
 
-    \func idTest4 => id'' (\level 2 _) (Functor Maybe)
+    \func idTest4 => id'' (\levels 2 _) (Functor Maybe)
 
     \func idTest5 : \Pi (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) -> \Prop =>
       \lam f => id'' (\suc \lp) (Functor Maybe f)
@@ -293,5 +293,279 @@
       , proof-b fn xs
       , proof-c fn xs
       )
+  }
+}
+
+\module CorrectnessOfInsertionSort \where {
+  \open Lists (List, cons, nil, /)
+  \open CurryHoward (||, inl, inr)
+
+  \class Preorder (E : \Type)
+    | \infix 4 <= : E -> E -> \Type
+    | <=-refl {x : E} : x <= x
+    | <=-trans {x y z : E} : x <= y -> y <= z -> x <= z
+
+  \class TotalPreorder \extends Preorder
+    | totality (x y : E) : (x <= y) || (y <= x)
+
+  \func sort {A : TotalPreorder} (xs : List A) : List A
+    | nil => nil
+    | cons a xs => insert a (sort xs)
+    \where
+      \func insert {A : TotalPreorder} (a : A) (xs : List A) : List A \elim xs
+        | nil => a / nil
+        | cons x xs => \case totality x a \with {
+          | inl _ => x / insert a xs
+          | inr _ => a / x / xs
+        }
+
+  \data Perm {A : \Type} (xs ys : List A) \elim xs, ys
+    | nil, nil => perm-nil
+    | cons x xs, cons y ys => perm-cons (x = y) (Perm xs ys)
+    | xs, ys => perm-trans {zs : List A} (Perm xs zs) (Perm zs ys)
+    | cons x (cons x' xs), cons y (cons y' ys) => perm-perm (x = y') (x' = y) (xs = ys)
+    \where {
+      \func perm-refl {A : \Type} {xs : List A} : Perm xs xs \elim xs
+        | nil => perm-nil
+        | cons x xs => perm-cons idp perm-refl
+
+      \func perm-swap {A : \Type} {x x' : A} {xs ys : List A} (p : Perm (x / x' / xs) ys) : Perm (x' / x / xs) ys =>
+        perm-trans (perm-perm idp idp idp) p
+    }
+
+  \func sort-perm {A : TotalPreorder} (xs : List A) : Perm xs (sort xs) \elim xs
+    | nil => perm-nil
+    | cons x xs => perm-trans (perm-cons idp (sort-perm xs)) (insert-perm x (sort xs))
+    \where {
+      \open sort
+      \open Perm
+
+      \func insert-perm {A : TotalPreorder} (a : A) (xs : List A) : Perm (a / xs) (insert a xs) \elim xs
+        | nil => perm-cons idp perm-nil
+        | cons x xs =>
+          \case totality x a \as txa
+          \return Perm (a / cons x xs) (\case txa \with {
+            | inl _ => x / insert a xs
+            | inr _ => a / x / xs
+          })
+          \with {
+            | inl _ => perm-trans (perm-perm idp idp idp) (perm-cons idp (insert-perm a xs))
+            | inr _ => perm-refl
+          }
+    }
+
+  --  \data IsSorted {A : Preorder} (xs : List A) \with
+  --    | nil => nil-sorted
+  --    | cons _ nil => single-sorted
+  --    | cons x (cons y _ \as xs) => cons-sorted (x <= y) (IsSorted xs)
+
+  \func head {A : \Type} (def : A) (xs : List A) : A \elim xs
+    | nil => def
+    | cons a _ => a
+
+  \data IsSorted {A : Preorder} (xs : List A) \elim xs
+    | nil => nil-sorted
+    | cons x xs => cons-sorted (x <= head x xs) (IsSorted xs)
+
+  \func sort-sorted {A : TotalPreorder} (xs : List A) : IsSorted (sort xs) \elim xs
+    | nil => nil-sorted
+    | cons a l => insert-sorted a (sort-sorted l)
+    \where {
+      \open sort
+
+      \func insert-sorted {A : TotalPreorder} (x : A)
+                          {xs : List A} (xs-sorted : IsSorted xs) : IsSorted (insert x xs) \elim xs
+        | nil => cons-sorted <=-refl nil-sorted
+        | cons a l =>
+          \case totality a x \as r
+          \return
+          IsSorted (\case r \with {
+            | inl _ => a / insert x l
+            | inr _ => x / a / l
+          })
+          \with {
+            | inl a<=x =>
+              \case xs-sorted
+              \with {
+                | cons-sorted a<=l l-sorted => cons-sorted (insert-lem a x l a<=x a<=l) (insert-sorted x l-sorted)
+              }
+            | inr x<=a => cons-sorted x<=a xs-sorted
+          }
+
+      \func insert-lem {A : TotalPreorder} (a x : A) (l : List A) (a<=x : a <= x) (a<=l : a <= head a l)
+        : a <= head a (insert x l) \elim l
+        | nil => a<=x
+        | cons b l =>
+          \case totality b x \as r
+          \return
+          a <= head a (
+            \case r
+            \with {
+              | inl _ => b / insert x l
+              | inr _ => x / b / l
+            }
+          )
+          \with {
+            | inl _ => a<=l
+            | inr _ => a<=x
+          }
+    }
+
+  \module Exercise5 \where {
+    \instance TotalPreorderNat : TotalPreorder Nat
+      | <= => <=
+      | <=-refl => refl
+      | <=-trans => trans
+      | totality => totality
+      \where {
+        \open Nat
+
+        \func refl {n : Nat} : n <= n \elim n
+          | 0 => zero<=_
+          | suc n => suc<=suc refl
+
+        \func trans {x y z : Nat} (p : x <= y) (q : y <= z) : x <= z \elim x, y, z
+          | 0, _, _ => zero<=_
+          | suc x, 0, 0 => p
+          | suc x, 0, suc z =>
+            \case \elim p
+            \with {
+            }
+          | suc x, suc y, 0 =>
+            \case \elim q
+            \with {
+            }
+          | suc x, suc y, suc z => \case \elim p, \elim q \with {
+            | suc<=suc p, suc<=suc q => suc<=suc (trans p q)
+          }
+
+        \func totality (x y : Nat) : x <= y || y <= x
+          | 0, 0 => inl zero<=_
+          | 0, suc y => inl zero<=_
+          | suc x, 0 => inr zero<=_
+          | suc x, suc y => \case totality x y \with {
+            | inl p => inl (suc<=suc p)
+            | inr q => inr (suc<=suc q)
+          }
+      }
+
+    \func msort {A : TotalPreorder} (xs : List A) : List A => merge-all (split xs)
+      \where {
+        \func split {A : \Type} (xs : List A) : List (List A) \elim xs
+          | nil => nil
+          | cons x xs => (x / nil) / split xs
+
+        \func test-split : split (1 / 2 / 3 / nil) = (1 / nil) / (2 / nil) / (3 / nil) / nil => idp
+
+        \func merge {A : TotalPreorder} (xs ys : List A) : List A \elim xs, ys
+          | nil, nil => nil
+          | nil, cons y ys => y / ys
+          | cons x xs, nil => x / xs
+          | cons x xs, cons y ys => \case totality x y \with {
+            | inl p => x / merge xs (y / ys)
+            | inr q => y / x / merge xs ys
+          }
+
+        \func test-merge : merge (1 / 3 / nil) (2 / 4 / nil) = 1 / 2 / 3 / 4 / nil => idp
+
+        \func test-merge' : merge (1 / 2 / nil) (3 / 4 / nil) = 1 / 2 / 3 / 4 / nil => idp
+
+        \func merge-all {A : TotalPreorder} (xss : List (List A)) : List A \elim xss
+          | nil => nil
+          | cons xs xss => merge (merge-all xss) xs
+
+        \func test-merge-all : merge-all ((1 / nil) / (2 / nil) / (3 / nil) / nil) = 1 / 2 / 3 / nil => idp
+
+        \func test-msort : msort (4 / 3 / 2 / 1 / nil) = 1 / 2 / 3 / 4 / nil => idp
+
+        \func test-msort' :
+          msort (91 / 47 / 51 / 18 / 38 / 5 / 100 / nil)
+            =
+          (5 / 18 / 38 / 47 / 51 / 91 / 100 / nil) => idp
+      }
+
+    \func msort-perm {A : TotalPreorder} (xs : List A) : Perm xs (msort xs) => merge-all-split-perm xs
+      \where {
+        \open msort
+        \open Perm
+
+        \func merge-nil-perm {A : TotalPreorder} (xs : List A) : Perm xs (merge xs nil) \elim xs
+          | nil => perm-nil
+          | cons x xs => perm-refl
+
+        \func merge-single-perm {A : TotalPreorder} (x : A) (xs : List A) : Perm (x / xs) (merge xs (x / nil)) \elim xs
+          | nil => perm-refl
+          | cons x' xs =>
+            \case totality x' x \as t
+            \return Perm (x / cons x' xs) (
+              \case t
+              \with {
+                | inl _ => x' / merge xs (x / nil)
+                | inr _ => x / x' / merge xs nil
+              }
+            )
+            \with {
+              | inl _ => perm-swap (perm-cons idp (merge-single-perm x xs))
+              | inr _ => perm-cons idp (perm-cons idp (merge-nil-perm xs))
+            }
+
+        \func merge-all-split-perm {A : TotalPreorder} (xs : List A) : Perm xs (merge-all (split xs)) \elim xs
+          | nil => perm-nil
+          | cons x xs =>
+            perm-trans (perm-cons idp (merge-all-split-perm xs)) (merge-single-perm x (merge-all (split xs)))
+      }
+
+    \func msort-sorted {A : TotalPreorder} (xs : List A) : IsSorted (msort xs) => merge-all-split-sorted xs
+      \where {
+        \open msort
+        \open SymmetryTransitivityLeibniz (transport)
+
+        \func merge-nil-refl {A : TotalPreorder} (xs : List A) : xs = merge xs nil \elim xs
+          | nil => idp
+          | cons x xs => idp
+
+        \func merge-ord {A : TotalPreorder} {x x' : A} {xs : List A}
+                        (o : x' <= head x' xs) (p : x' <= x)
+          : x' <= head x' (merge xs (x / nil)) \elim xs
+          | nil => p
+          | cons a xs =>
+            \case totality a x \as t
+            \return x' <= head x' (
+              \case t
+              \with {
+                | inl _ => a / merge xs (x / nil)
+                | inr _ => x / a / merge xs nil
+              }
+            )
+            \with {
+              | inl l => o
+              | inr r => p
+            }
+
+        \func merge-single-sorted {A : TotalPreorder} (x : A) (xs : List A) (s : IsSorted xs)
+          : IsSorted (merge xs (x / nil)) \elim xs
+          | nil => cons-sorted <=-refl nil-sorted
+          | cons x' xs =>
+            \case totality x' x \as t
+            \return IsSorted (
+              \case t
+              \with {
+                | inl _ => x' / merge xs (x / nil)
+                | inr _ => x / x' / merge xs nil
+              }
+            )
+            \with {
+              | inl p =>
+                \case \elim s \with {
+                  | cons-sorted o s =>
+                    cons-sorted (merge-ord o p) (merge-single-sorted x xs s)
+                }
+              | inr q => transport (\lam k => IsSorted (x / x' / k)) (merge-nil-refl xs) (cons-sorted q s)
+            }
+
+        \func merge-all-split-sorted {A : TotalPreorder} (xs : List A) : IsSorted (merge-all (split xs)) \elim xs
+          | nil => nil-sorted
+          | cons x xs => merge-single-sorted x (merge-all (split xs)) (merge-all-split-sorted xs)
+      }
   }
 }
